@@ -6,14 +6,12 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-Image=ghcr.io/nferdazel/qouver-api:main
+Image=localhost/qouver-api:local
 ContainerName=qouver-api
 Network=qouver
 PublishPort=127.0.0.1:8091:8091
-Environment=QOUVER_HOST=0.0.0.0
-Environment=QOUVER_PORT=8091
-EnvironmentFile=%h/.config/qouver/qouver-api.env
-AutoUpdate=registry
+Pull=never
+EnvironmentFile=/srv/qouver/apps/qouver/env/qouver-prod.env
 
 [Service]
 Restart=always

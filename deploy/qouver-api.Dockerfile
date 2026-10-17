@@ -1,5 +1,5 @@
 # Stage 1: Build Nim binary
-FROM nimlang/nim:2.2.0-alpine AS builder
+FROM docker.io/nimlang/nim:2.2.0-alpine AS builder
 
 WORKDIR /app
 RUN apk add --no-cache postgresql-dev gcc musl-dev git
@@ -15,7 +15,7 @@ RUN nim c -d:release --opt:speed --hints:off --warnings:on \
     -o:/app/qouver-api apps/api/src/main.nim
 
 # Stage 2: Runtime image
-FROM alpine:3.21
+FROM docker.io/library/alpine:3.21
 
 WORKDIR /app
 RUN apk add --no-cache libpq ca-certificates
