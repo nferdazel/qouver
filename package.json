@@ -1,0 +1,19 @@
+{
+  "name": "qouver-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build:web": "pnpm --filter @qouver/web build",
+    "check:web": "pnpm --filter @qouver/web check",
+    "test:ui": "pnpm --filter @qouver/ui test",
+    "e2e": "pnpm --filter @qouver/web e2e"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.6.4",
+    "typescript": "^5.9.3"
+  }
+}

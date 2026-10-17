@@ -1,0 +1,27 @@
+# Build & binary artifacts
+.build/
+nimcache/
+*.exe
+*.o
+
+# Node & JS/TS
+node_modules/
+.pnpm-store/
+apps/web/.svelte-kit/
+apps/web/build/
+packages/api-client/src/generated/DO_NOT_EDIT.md
+
+# Secrets & local dev configuration (NEVER commit)
+.local/
+*.env
+!*.env.example
+!**/ops/env/*.env.example
+
+# Test & report artifacts
+test-results/
+playwright-report/
+blob-report/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
