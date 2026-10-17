@@ -37,3 +37,11 @@ task                 # Single-door POSIX task runner
 ./task build         # Build Nim API binary and SvelteKit static site
 ./task ci            # Run complete gate suite
 ```
+
+## Deployment
+
+Continuous deployment runs on VPS via GitHub push webhooks and Quadlet:
+- **Web:** SvelteKit pre-rendered static HTML served directly by host Caddy from `/srv/qouver/apps/qouver/web`.
+- **API:** Containerized Nim service running as systemd Quadlet (`qouver-api.container`) on `127.0.0.1:8091`.
+- **Database:** PostgreSQL container on internal `qouver` network (`qouver-postgres:5432`).
+
