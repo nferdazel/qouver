@@ -1,0 +1,25 @@
+# llms.txt
+
+> Qouver: a home for systems and ideas. Finds overlooked opportunities, turns
+> them into useful systems, and shares what it learns.
+
+## About
+
+Qouver is the personal site of a systems-minded builder. It presents a curated
+set of projects, an about page describing the person behind the work, and a
+contact page. The site is fully static: every page is prerendered HTML with
+zero client-side JavaScript.
+
+## Key pages
+
+- [Home](https://qouver.com/): Overview of what Qouver is about: systems, ideas, and selected work.
+- [Projects](https://qouver.com/projects/): Catalog of projects, each with a title, description, and stack.
+- [About](https://qouver.com/about/): Who is behind Qouver, approach, and philosophy.
+- [Contact](https://qouver.com/contact/): Ways to get in touch.
+
+## Highlights
+
+- Fully static site built with the Jaspr framework (Dart), prerendered at build time.
+- Every page ships title + meta description + canonical + OpenGraph tags, server-side.
+- No client-side JavaScript: content is readable by any crawler without rendering.
+- sitemap.xml is generated at build time from the route list.

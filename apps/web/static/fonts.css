@@ -1,0 +1,20 @@
+/* Self-hosted variable fonts (latin subset, woff2).
+   Fraunces: display serif. Archivo: structure, body, labels.
+   Downloaded from fonts.gstatic.com; see scripts/build.sh for provenance. */
+
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400 700;
+  font-optical-sizing: auto;
+  font-display: swap;
+  src: url(fonts/fraunces-var.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(fonts/archivo-var.woff2) format('woff2');
+}

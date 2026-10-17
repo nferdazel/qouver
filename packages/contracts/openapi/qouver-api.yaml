@@ -1,0 +1,370 @@
+openapi: 3.1.0
+info:
+  title: Qouver API
+  version: 0.1.0
+  description: Public & systems API for Qouver (qouver.com)
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /api/projects:
+    get:
+      summary: List all systems & projects
+      operationId: listProjects
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+
+  /api/projects/{slug}:
+    get:
+      summary: Get project by slug
+      operationId: getProjectBySlug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Project detail with case study
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetail'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/journal:
+    get:
+      summary: List all journal essays
+      operationId: listJournalArticles
+      responses:
+        '200':
+          description: List of journal essays
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JournalArticleSummary'
+
+  /api/journal/{slug}:
+    get:
+      summary: Get journal article by slug
+      operationId: getJournalArticleBySlug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Full journal essay
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JournalArticleDetail'
+        '404':
+          description: Article not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/systems/status:
+    get:
+      summary: Realtime health status of monitored umbrella systems
+      operationId: getSystemsStatus
+      responses:
+        '200':
+          description: Systems status list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SystemHealth'
+
+  /api/contact:
+    post:
+      summary: Submit a contact inquiry
+      operationId: submitContactInquiry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactInquiryRequest'
+      responses:
+        '201':
+          description: Inquiry received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactInquiryResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required:
+        - status
+        - database
+        - version
+        - uptimeSeconds
+      properties:
+        status:
+          type: string
+          example: "ok"
+        database:
+          type: string
+          example: "connected"
+        version:
+          type: string
+          example: "0.1.0"
+        uptimeSeconds:
+          type: integer
+          example: 3600
+
+    Project:
+      type: object
+      required:
+        - index
+        - slug
+        - name
+        - category
+        - tagline
+        - description
+        - focus
+        - status
+        - stack
+      properties:
+        index:
+          type: string
+          example: "01"
+        slug:
+          type: string
+          example: "skyward"
+        name:
+          type: string
+          example: "Skyward"
+        category:
+          type: string
+          example: "Airline Tycoon Simulation"
+        tagline:
+          type: string
+          example: "Authoritative world tick simulation engine."
+        description:
+          type: string
+        focus:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: ["Live", "Backend", "Archived"]
+        stack:
+          type: string
+          example: "Go · Flutter · PostgreSQL · VPS"
+        url:
+          type: string
+          nullable: true
+        urlLabel:
+          type: string
+          default: "VISIT"
+
+    CaseStudyDecision:
+      type: object
+      required:
+        - heading
+        - explanation
+      properties:
+        heading:
+          type: string
+        explanation:
+          type: string
+
+    CaseStudy:
+      type: object
+      required:
+        - title
+        - overview
+        - problem
+        - architecture
+        - decisions
+        - takeaways
+      properties:
+        title:
+          type: string
+        overview:
+          type: string
+        problem:
+          type: string
+        architecture:
+          type: string
+        decisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseStudyDecision'
+        takeaways:
+          type: string
+
+    ProjectDetail:
+      allOf:
+        - $ref: '#/components/schemas/Project'
+        - type: object
+          properties:
+            caseStudy:
+              $ref: '#/components/schemas/CaseStudy'
+
+    JournalArticleSummary:
+      type: object
+      required:
+        - slug
+        - title
+        - date
+        - readTime
+        - category
+        - summary
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        date:
+          type: string
+          format: date
+        readTime:
+          type: string
+        category:
+          type: string
+        summary:
+          type: string
+
+    JournalArticleDetail:
+      allOf:
+        - $ref: '#/components/schemas/JournalArticleSummary'
+        - type: object
+          required:
+            - paragraphs
+          properties:
+            quote:
+              type: string
+              nullable: true
+            codeSnippet:
+              type: string
+              nullable: true
+            paragraphs:
+              type: array
+              items:
+                type: string
+
+    SystemHealth:
+      type: object
+      required:
+        - name
+        - slug
+        - targetUrl
+        - status
+        - lastCheckedAt
+        - responseTimeMs
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        targetUrl:
+          type: string
+        status:
+          type: string
+          enum: ["online", "degraded", "offline"]
+        lastCheckedAt:
+          type: string
+          format: date-time
+        responseTimeMs:
+          type: integer
+
+    ContactInquiryRequest:
+      type: object
+      required:
+        - name
+        - email
+        - subject
+        - message
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        subject:
+          type: string
+          minLength: 2
+          maxLength: 150
+        message:
+          type: string
+          minLength: 10
+          maxLength: 2000
+
+    ContactInquiryResponse:
+      type: object
+      required:
+        - id
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          example: "received"
+        createdAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
