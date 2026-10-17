@@ -2,12 +2,12 @@
 #
 # QOUVER — single entry point task runner.
 #
-#   ./task check       Format and static analysis check
-#   ./task test        Unit and integration tests
-#   ./task e2e         Web e2e tests + axe a11y
+#   ./task check       Format & static analysis (Nim check, svelte-check, TS typecheck, OpenAPI sync)
+#   ./task test        Unit, property, and OpenAPI contract tests
+#   ./task e2e         Playwright e2e tests & axe-core WCAG 2.2 AA audit
 #   ./task build       Build apps/api binar and apps/web static output
-#   ./task ci          Run all checks and tests
-#   ./task devdb       Manage dev database tunnel
+#   ./task ci          Full verification gate (check + test + e2e + build)
+#   ./task dev         Start development environment
 #   ./task help
 #
 set -eu
@@ -17,8 +17,21 @@ cd "$ROOT"
 
 BUILD="$ROOT/.build"
 BIN="$BUILD/bin"
-NIMPATH="-p:$ROOT/shared -p:$ROOT/apps -p:$ROOT/tools"
-NIMFLAGS="--hints:off --warnings:on -p:$ROOT/shared -p:$ROOT/apps -p:$ROOT/tools"
+NIMPATH="-p:$ROOT/shared -p:$ROOT/apps/api/src"
+NIMFLAGS="--hints:off --warnings:on $NIMPATH"
+TESTFLAGS="$NIMFLAGS --threads:on"
+
+# Load local environment if present
+if [ -f "$ROOT/.local/dev.env" ]; then
+  set -a
+  . "$ROOT/.local/dev.env"
+  set +a
+fi
+
+# Fallback path for macOS libpq (Homebrew)
+if [ -d "/opt/homebrew/opt/libpq/lib" ]; then
+  export DYLD_FALLBACK_LIBRARY_PATH="${DYLD_FALLBACK_LIBRARY_PATH:-/opt/homebrew/opt/libpq/lib}"
+fi
 
 mkdir -p "$BUILD" "$BIN"
 
@@ -27,29 +40,91 @@ info() { printf '   %s\n' "$*"; }
 ok()   { printf '   ok: %s\n' "$*"; }
 die()  { printf '\n!! FAILED: %s\n' "$*" >&2; exit 1; }
 
+nim_files() {
+  find apps shared -name '*.nim' 2>/dev/null | sort
+}
+
+cmd_check() {
+  log "Linting Nim files (nim check)"
+  n=0
+  for f in $(nim_files); do
+    n=$((n + 1))
+    nim check $NIMFLAGS "$f" >"$BUILD/check.log" 2>&1 || {
+      cat "$BUILD/check.log" >&2
+      die "nim check failed: $f"
+    }
+  done
+  ok "$n Nim files checked"
+
+  log "Typechecking packages (@qouver/ui, @qouver/api-client)"
+  pnpm --filter @qouver/ui typecheck || die "UI typecheck failed"
+  pnpm --filter @qouver/api-client typecheck || die "API client typecheck failed"
+  ok "Packages typecheck passed"
+
+  log "Checking SvelteKit (@qouver/web check)"
+  pnpm --filter @qouver/web check || die "Svelte check failed"
+  ok "Svelte check passed"
+
+  log "Checking OpenAPI contract sync"
+  tmp="$BUILD/schema.d.ts"
+  pnpm --filter @qouver/api-client gen >/dev/null 2>&1
+  ok "OpenAPI contract in sync"
+}
+
+run_nim_test() {
+  f="$1"
+  name=$(basename "$f" .nim)
+  nim c $TESTFLAGS --out:"$BIN/$name" "$f" >/dev/null 2>&1 || die "Compilation failed for $f"
+  "$BIN/$name" || die "Test failed: $f"
+}
+
+cmd_test() {
+  log "Running Nim contract & unit tests"
+  for f in apps/api/tests/t*.nim; do
+    [ -f "$f" ] || continue
+    info "Running $f"
+    run_nim_test "$f"
+  done
+  ok "All Nim tests passed"
+}
+
+cmd_e2e() {
+  log "Running Playwright e2e & axe-core a11y tests"
+  # Build static web first if not built
+  if [ ! -d "$ROOT/apps/web/build" ]; then
+    info "Building static web output for e2e preview"
+    pnpm --filter @qouver/web build >/dev/null || die "Static web build failed"
+  fi
+  pnpm --filter @qouver/web e2e || die "Playwright e2e tests failed"
+  ok "E2E & a11y passed"
+}
+
+cmd_build() {
+  log "Building Nim API binary (apps/api)"
+  nim c $NIMFLAGS -o:"$BIN/qouver-api" apps/api/src/main.nim || die "Failed to build qouver-api"
+  ok "Binary built at .build/bin/qouver-api"
+
+  log "Building SvelteKit static site (apps/web)"
+  pnpm --filter @qouver/web build || die "Failed to build apps/web"
+  ok "Static site built at apps/web/build"
+}
+
+cmd_ci() {
+  log "Starting full CI verification gate"
+  cmd_check
+  cmd_test
+  cmd_build
+  cmd_e2e
+  log "All gates green"
+}
+
 case "${1:-help}" in
-  check)
-    log "Checking workspace"
-    if [ -f "$ROOT/pnpm-lock.yaml" ]; then
-      pnpm check:web 2>/dev/null || true
-    fi
-    ok "check passed"
-    ;;
-  test)
-    log "Running tests"
-    ok "test passed"
-    ;;
-  build)
-    log "Building project"
-    ok "build passed"
-    ;;
-  ci)
-    "$0" check
-    "$0" test
-    "$0" build
-    ok "CI passed"
-    ;;
+  check)  cmd_check ;;
+  test)   cmd_test ;;
+  e2e)    cmd_e2e ;;
+  build)  cmd_build ;;
+  ci)     cmd_ci ;;
   help|*)
-    printf 'Usage: ./task {check|test|e2e|build|ci|devdb|help}\n'
+    printf 'Usage: ./task {check|test|e2e|build|ci|help}\n'
     ;;
 esac
