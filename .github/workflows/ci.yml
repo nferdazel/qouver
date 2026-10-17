@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     name: Verify & Test
@@ -13,25 +20,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.25.0
-          run_install: false
+          cache: pnpm
 
       - name: Setup Nim
-        uses: jasonriddle/setup-nim-action@v1
+        uses: jiro4989/setup-nim-action@v2
         with:
           nim-version: '2.2.0'
 
       - name: Install system dependencies (libpq)
         run: |
-          sudo apt-get update
+          sudo apt-get update -qq
           sudo apt-get install -y libpq-dev
 
       - name: Install Nim dependencies
@@ -41,7 +48,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @qouver/web exec playwright install --with-deps chromium
 
       - name: Run verification suite (./task ci)
         run: ./task ci
