@@ -3,6 +3,8 @@
 nimcache/
 *.exe
 *.o
+apps/api/tests/t*
+!apps/api/tests/t*.nim
 
 # Node & JS/TS
 node_modules/
