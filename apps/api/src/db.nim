@@ -321,5 +321,8 @@ proc addInquiry*(db: Database, name, email, subject, message: string): ContactIn
       """, result.id, result.name, result.email, result.subject, result.message, result.status, result.createdAt)
     except CatchableError as e:
       echo "[DB ERR] Failed to insert inquiry to postgres: ", e.msg
+      result.status = "queued_local"
 
+  if db.inMemoryInquiries.len >= 500:
+    db.inMemoryInquiries.delete(0)
   db.inMemoryInquiries.add(result)
