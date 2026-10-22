@@ -17,3 +17,10 @@ proc respondError*(req: Request, status: int, err: string, message: string) =
     "message": message
   }
   req.respondJson(status, body)
+
+proc respondOptions*(req: Request) =
+  var headers: HttpHeaders
+  headers["Access-Control-Allow-Origin"] = "*"
+  headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+  headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+  req.respond(204, headers)

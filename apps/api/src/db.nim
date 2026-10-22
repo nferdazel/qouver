@@ -1,20 +1,26 @@
 ## PostgreSQL Database Layer for Qouver
 
-import std/[options, strutils, times, sysrand]
+import std/[locks, options, strutils, times, sysrand]
 import db_connector/db_postgres
 import kernel/types
 
 type
   Database* = ref object
     conn*: Option[DbConn]
+    lock*: Lock
     startTime*: float
     inMemoryProjects*: seq[Project]
     inMemoryArticles*: seq[JournalArticle]
     inMemorySystems*: seq[SystemHealth]
     inMemoryInquiries*: seq[ContactInquiry]
 
+template withDb*(db: Database, body: untyped) =
+  withLock db.lock:
+    body
+
 proc newDatabase*(databaseUrl: string = ""): Database =
   new(result)
+  initLock(result.lock)
   result.conn = none(DbConn)
   result.startTime = epochTime()
   result.inMemoryProjects = @[]
@@ -32,8 +38,9 @@ proc newDatabase*(databaseUrl: string = ""): Database =
 proc isConnected*(db: Database): bool =
   if db.conn.isSome:
     try:
-      let row = db.conn.get.getRow(sql"SELECT 1")
-      return row.len > 0 and row[0] == "1"
+      withLock db.lock:
+        let row = db.conn.get.getRow(sql"SELECT 1")
+        return row.len > 0 and row[0] == "1"
     except CatchableError:
       return false
   false
@@ -42,8 +49,9 @@ proc migrate*(db: Database) =
   if db.conn.isNone:
     return
 
-  let c = db.conn.get
-  c.exec(sql"""
+  withLock db.lock:
+    let c = db.conn.get
+    c.exec(sql"""
     CREATE TABLE IF NOT EXISTS projects (
       slug VARCHAR(64) PRIMARY KEY,
       index_num VARCHAR(8) NOT NULL,
@@ -60,7 +68,7 @@ proc migrate*(db: Database) =
     );
   """)
 
-  c.exec(sql"""
+    c.exec(sql"""
     CREATE TABLE IF NOT EXISTS journal_articles (
       slug VARCHAR(128) PRIMARY KEY,
       title VARCHAR(256) NOT NULL,
@@ -74,7 +82,7 @@ proc migrate*(db: Database) =
     );
   """)
 
-  c.exec(sql"""
+    c.exec(sql"""
     CREATE TABLE IF NOT EXISTS systems_health (
       slug VARCHAR(64) PRIMARY KEY,
       name VARCHAR(128) NOT NULL,
@@ -85,7 +93,7 @@ proc migrate*(db: Database) =
     );
   """)
 
-  c.exec(sql"""
+    c.exec(sql"""
     CREATE TABLE IF NOT EXISTS inquiries (
       id UUID PRIMARY KEY,
       name VARCHAR(128) NOT NULL,
@@ -295,6 +303,16 @@ proc bytesToHex(bytes: openArray[byte]): string =
     result[i * 2] = hexChars[int(b shr 4)]
     result[i * 2 + 1] = hexChars[int(b and 0x0f)]
 
+proc close*(db: Database) =
+  withLock db.lock:
+    if db.conn.isSome:
+      try:
+        db.conn.get.close()
+      except CatchableError:
+        discard
+      db.conn = none(DbConn)
+  deinitLock(db.lock)
+
 proc addInquiry*(db: Database, name, email, subject, message: string): ContactInquiry =
   var rnd: array[16, byte]
   discard urandom(rnd)
@@ -313,16 +331,17 @@ proc addInquiry*(db: Database, name, email, subject, message: string): ContactIn
     createdAt: nowStr
   )
 
-  if db.conn.isSome:
-    try:
-      db.conn.get.exec(sql"""
-        INSERT INTO inquiries (id, name, email, subject, message, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      """, result.id, result.name, result.email, result.subject, result.message, result.status, result.createdAt)
-    except CatchableError as e:
-      echo "[DB ERR] Failed to insert inquiry to postgres: ", e.msg
-      result.status = "queued_local"
+  withLock db.lock:
+    if db.conn.isSome:
+      try:
+        db.conn.get.exec(sql"""
+          INSERT INTO inquiries (id, name, email, subject, message, status, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, result.id, result.name, result.email, result.subject, result.message, result.status, result.createdAt)
+      except CatchableError as e:
+        echo "[DB ERR] Failed to insert inquiry to postgres: ", e.msg
+        result.status = "queued_local"
 
-  if db.inMemoryInquiries.len >= 500:
-    db.inMemoryInquiries.delete(0)
-  db.inMemoryInquiries.add(result)
+    if db.inMemoryInquiries.len >= 500:
+      db.inMemoryInquiries.delete(0)
+    db.inMemoryInquiries.add(result)

@@ -17,6 +17,18 @@ type
     operationId*: string
     handler*: RouteHandler
 
+proc handleOptions*(req: Request) {.gcsafe.} =
+  ## Responds to HTTP OPTIONS preflight requests with 204 No Content and CORS headers
+  var headers: HttpHeaders
+  headers["Access-Control-Allow-Origin"] = "*"
+  headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+  headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+  req.respond(204, headers)
+
+proc handleOptions*(db: Database, req: Request) {.gcsafe.} =
+  ## Database overload for handleOptions to match RouteHandler signature if needed
+  handleOptions(req)
+
 proc allRoutes*(): seq[RouteSpec] =
   @[
     RouteSpec(

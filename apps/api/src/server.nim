@@ -21,14 +21,37 @@ proc bindHandler*(handler: RouteHandler, db: Database): RequestHandler =
     handler(db, req)
 
 proc buildRouter*(db: Database): Router =
+  # CORS preflight OPTIONS handling for all endpoints
+  result.options("/**", proc(req: Request) {.gcsafe.} =
+    handleOptions(req)
+  )
+  result.options("/*", proc(req: Request) {.gcsafe.} =
+    handleOptions(req)
+  )
+  result.options("/", proc(req: Request) {.gcsafe.} =
+    handleOptions(req)
+  )
+
   for spec in allRoutes():
     let handleRequest = bindHandler(spec.handler, db)
     let pattern = mummyPattern(spec.path)
+    result.options(pattern, proc(req: Request) {.gcsafe.} =
+      handleOptions(req)
+    )
     case spec.httpMethod
     of hmGet:
       result.get(pattern, handleRequest)
     of hmPost:
       result.post(pattern, handleRequest)
+
+  # Fallback for methodNotAllowed on preflight OPTIONS
+  result.methodNotAllowedHandler = proc(req: Request) {.gcsafe.} =
+    if req.httpMethod == "OPTIONS":
+      handleOptions(req)
+    else:
+      var headers: HttpHeaders
+      headers["Content-Type"] = "text/html"
+      req.respond(405, headers, "<h1>Method Not Allowed</h1>")
 
 proc startServer*(cfg: Config) =
   let db = newDatabase(cfg.databaseUrl)

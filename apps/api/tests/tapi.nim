@@ -1,6 +1,6 @@
 import std/[options, unittest]
 import kernel/types
-import ../src/db
+import ../src/[db, routes, server]
 
 suite "Qouver API Domain & Database Tests":
   setup:
@@ -54,3 +54,18 @@ suite "Qouver API Domain & Database Tests":
     check systems.len == 3
     check systems[0].name == "Skyward"
     check systems[0].status == ssOnline
+
+  test "database operations are thread-safe under concurrent access":
+    var threads: array[4, Thread[Database]]
+    for i in 0 ..< 4:
+      createThread(threads[i], proc(d: Database) {.thread.} =
+        for j in 0 ..< 25:
+          discard d.addInquiry("User " & $j, "user@example.com", "Subject", "Message content")
+          discard d.isConnected()
+      , db)
+    joinThreads(threads)
+    check not db.isConnected()
+
+  test "router builds with OPTIONS preflight handling":
+    let router = buildRouter(db)
+    check router.routes.len >= allRoutes().len

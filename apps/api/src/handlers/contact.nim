@@ -1,6 +1,6 @@
 ## Contact form handler
 
-import std/[json, strutils, tables, times]
+import std/[json, locks, strutils, tables, times]
 import mummy
 import ./common
 import ../db
@@ -12,6 +12,9 @@ type
 
 var
   contactBuckets: Table[string, ContactRateBucket]
+  rateLimiterLock: Lock
+
+initLock(rateLimiterLock)
 
 proc extractClientIp(req: Request): string =
   if req.headers.contains("CF-Connecting-IP") and req.headers["CF-Connecting-IP"].strip.len > 0:
@@ -27,30 +30,31 @@ proc allowContact(ip: string): bool =
   const maxSubmissions = 5
   const windowSec = 300.0
   {.cast(gcsafe).}:
-    let now = epochTime()
+    withLock rateLimiterLock:
+      let now = epochTime()
 
-    if contactBuckets.len > 1024:
-      var toDel: seq[string] = @[]
-      for k, v in contactBuckets:
-        if now > v.resetAt:
-          toDel.add(k)
-      for k in toDel:
-        contactBuckets.del(k)
+      if contactBuckets.len > 1024:
+        var toDel: seq[string] = @[]
+        for k, v in contactBuckets:
+          if now > v.resetAt:
+            toDel.add(k)
+        for k in toDel:
+          contactBuckets.del(k)
 
-    if not contactBuckets.hasKey(ip):
-      contactBuckets[ip] = ContactRateBucket(count: 1, resetAt: now + windowSec)
-      return true
+      if not contactBuckets.hasKey(ip):
+        contactBuckets[ip] = ContactRateBucket(count: 1, resetAt: now + windowSec)
+        return true
 
-    var b = contactBuckets[ip]
-    if now > b.resetAt:
-      b.count = 1
-      b.resetAt = now + windowSec
+      var b = contactBuckets[ip]
+      if now > b.resetAt:
+        b.count = 1
+        b.resetAt = now + windowSec
+        contactBuckets[ip] = b
+        return true
+
+      inc b.count
       contactBuckets[ip] = b
-      return true
-
-    inc b.count
-    contactBuckets[ip] = b
-    return b.count <= maxSubmissions
+      return b.count <= maxSubmissions
 
 proc handleContact*(db: Database, req: Request) {.gcsafe.} =
   let ip = extractClientIp(req)
