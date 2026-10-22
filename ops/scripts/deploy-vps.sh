@@ -96,13 +96,13 @@ cd "$MONO_DIR"
 if podman image exists localhost/qouver-api:local; then
   podman tag localhost/qouver-api:local localhost/qouver-api:prev 2>/dev/null || true
 fi
-podman build -t localhost/qouver-api:local -f deploy/qouver-api.Dockerfile .
+podman build -t localhost/qouver-api:local -f ops/container/qouver-api.Dockerfile .
 
 # 7. Sync systemd quadlet container definition
 UNIT_DIR="$HOME/.config/containers/systemd"
 mkdir -p "$UNIT_DIR"
-if [ -f "$MONO_DIR/deploy/qouver-api.container" ]; then
-  cp -f "$MONO_DIR/deploy/qouver-api.container" "$UNIT_DIR/qouver-api.container"
+if [ -f "$MONO_DIR/ops/systemd/qouver-api.container" ]; then
+  cp -f "$MONO_DIR/ops/systemd/qouver-api.container" "$UNIT_DIR/qouver-api.container"
 fi
 
 # 8. Restart API container
