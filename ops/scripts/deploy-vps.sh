@@ -9,7 +9,7 @@
 set -euo pipefail
 
 REPO="${1:-qouver}"
-REF="${2:-refs/heads/main}"
+REF="${2:-}"
 
 APP_DIR="${QOUVER_APP_DIR:-/srv/qouver/apps/qouver}"
 MONO_DIR="$APP_DIR/monorepo"
