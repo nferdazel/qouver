@@ -16,14 +16,25 @@ var
 
 initLock(rateLimiterLock)
 
+proc isTrustedProxy(ip: string): bool =
+  ip in ["127.0.0.1", "::1", "::ffff:127.0.0.1", "localhost"] or
+    ip.startsWith("127.") or
+    ip.startsWith("10.88.") or
+    ip.startsWith("10.89.")
+
 proc extractClientIp(req: Request): string =
-  if req.headers.contains("CF-Connecting-IP") and req.headers["CF-Connecting-IP"].strip.len > 0:
-    return req.headers["CF-Connecting-IP"].strip
-  if req.headers.contains("X-Forwarded-For") and req.headers["X-Forwarded-For"].strip.len > 0:
-    let first = req.headers["X-Forwarded-For"].split(',')[0].strip
-    if first.len > 0:
-      return first
-  return "127.0.0.1"
+  let remote = req.remoteAddress.strip
+  let effectiveRemote = if remote.len > 0: remote else: "127.0.0.1"
+
+  # Hanya percaya header forwarded/cloudflare jika koneksi langsung berasal dari proxy terpercaya
+  if isTrustedProxy(effectiveRemote):
+    if req.headers.contains("CF-Connecting-IP") and req.headers["CF-Connecting-IP"].strip.len > 0:
+      return req.headers["CF-Connecting-IP"].strip
+    if req.headers.contains("X-Forwarded-For") and req.headers["X-Forwarded-For"].strip.len > 0:
+      let first = req.headers["X-Forwarded-For"].split(',')[0].strip
+      if first.len > 0:
+        return first
+  return effectiveRemote
 
 proc allowContact(ip: string): bool =
   ## Max 5 contact submissions per 5 minutes per IP
