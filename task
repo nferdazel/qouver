@@ -5,7 +5,7 @@
 #   ./task check       Format & static analysis (Nim check, svelte-check, TS typecheck, OpenAPI sync)
 #   ./task test        Unit, property, and OpenAPI contract tests
 #   ./task e2e         Playwright e2e tests & axe-core WCAG 2.2 AA audit
-#   ./task build       Build apps/api binar and apps/web static output
+#   ./task build       Build apps/api binary and apps/web static output
 #   ./task ci          Full verification gate (check + test + e2e + build)
 #   ./task dev         Start development environment
 #   ./task help
