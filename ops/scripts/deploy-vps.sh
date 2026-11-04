@@ -73,6 +73,16 @@ if [ -f "$REPO_SCRIPT" ] && ! cmp -s "$REPO_SCRIPT" "$SELF_SCRIPT"; then
     && log "==> scripts/deploy-vps.sh updated from repo (applies on next deploy)"
 fi
 
+# Sync helper scripts so the server copies do not drift from the repo.
+for helper in smoke.sh rollback.sh; do
+  SRC="$MONO_DIR/ops/scripts/$helper"
+  DST="$APP_DIR/scripts/$helper"
+  if [ -f "$SRC" ] && ! cmp -s "$SRC" "$DST"; then
+    cp -f "$SRC" "$DST.new.$$" && chmod +x "$DST.new.$$" && mv -f "$DST.new.$$" "$DST" \
+      && log "==> scripts/$helper updated from repo"
+  fi
+done
+
 # 5. Build static web (SvelteKit)
 log "==> Building web assets with $PNPM_CMD..."
 cd "$MONO_DIR"
@@ -114,7 +124,7 @@ systemctl --user restart qouver-api
 log "==> Verifying health gate ($HEALTH_URL)..."
 HEALTHY=0
 for i in $(seq 1 15); do
-  if curl -s -f "$HEALTH_URL" >/dev/null 2>&1; then
+  if curl -s -f --max-time 3 "$HEALTH_URL" >/dev/null 2>&1; then
     HEALTHY=1
     break
   fi
