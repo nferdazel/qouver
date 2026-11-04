@@ -39,7 +39,7 @@ log "==> Deploy triggered for $REPO ($REF)"
 
 # 3. Setup environment PATH (fnm / node / corepack / pnpm)
 if [ -d "$HOME/.local/share/fnm" ]; then
-  export PATH="$HOME/.local/share/fnm/current/bin:$HOME/.local/share/fnm/aliases/default/bin:$HOME/.local/bin:$PATH"
+  export PATH="$HOME/.local/share/fnm/current/bin:$HOME/.local/share/fnm/aliases/default/bin:$HOME/.local/share/pnpm/bin:$HOME/.local/bin:$PATH"
   eval "$(fnm env 2>/dev/null)" || true
 fi
 
