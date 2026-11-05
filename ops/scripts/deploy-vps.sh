@@ -33,7 +33,7 @@ fi
 
 # 2. Concurrency lock
 exec 200>"$LOCK_FILE"
-flock -n 200 || die "Another deploy is running ($LOCK_FILE locked)"
+flock -w 1200 200 || die "Another deploy is still running after 1200s ($LOCK_FILE locked)"
 
 log "==> Deploy triggered for $REPO ($REF)"
 
