@@ -24,12 +24,13 @@
       <QMark size="30" class="brand__mark" accentDot={true} />
       <span class="brand__word">Qouver</span>
     </a>
-    <nav class="nav" aria-label="Primary">
+    <nav class="nav rd-nav" aria-label="Primary">
       <a href="/projects" class="nav__link {isActive('/projects') ? 'nav__link--active' : ''}">Projects</a>
       <a href="/journal" class="nav__link {isActive('/journal') ? 'nav__link--active' : ''}">Journal</a>
       <a href="/about" class="nav__link {isActive('/about') ? 'nav__link--active' : ''}">About</a>
       <a href="/contact" class="nav__link {isActive('/contact') ? 'nav__link--active' : ''}">Contact</a>
     </nav>
+    <a class="rd-masthead__mail" href="mailto:{contactEmail}">{contactEmail}</a>
   </div>
 </header>
 
@@ -39,19 +40,19 @@
 
 <footer class="site-footer">
   <div class="container">
-    <div class="site-footer__top">
+    <div class="rd-footer__top">
       <div>
-        <a href="/" class="site-footer__brand" aria-label="Qouver, home">
+        <a href="/" class="rd-footer__brand" aria-label="Qouver, home">
           <QMark size="28" class="brand__mark" accentDot={true} />
           <span class="brand__word">{siteName}</span>
         </a>
-        <p class="footer__tagline">
+        <p class="rd-footer__tagline">
           Built from what others leave behind. A home for systems and ideas.
         </p>
       </div>
-      <div class="site-footer__nav">
-        <div class="footer__col">
-          <h4>Index</h4>
+      <div class="rd-footer__cols">
+        <div class="rd-footer__col">
+          <h3>Index</h3>
           <ul>
             <li><a href="/projects">Projects</a></li>
             <li><a href="/journal">Journal</a></li>
@@ -59,8 +60,8 @@
             <li><a href="/contact">Contact</a></li>
           </ul>
         </div>
-        <div class="footer__col">
-          <h4>Contact</h4>
+        <div class="rd-footer__col">
+          <h3>Contact</h3>
           <ul>
             <li><a href="mailto:{contactEmail}">{contactEmail}</a></li>
             <li>
@@ -77,9 +78,9 @@
         </div>
       </div>
     </div>
-    <div class="site-footer__bottom">
+    <div class="rd-footer__bottom">
       <span>© 2026 Qouver</span>
-      <span>Set in Fraunces & Archivo · Built with SvelteKit & Nim</span>
+      <span>Set in Fraunces & Archivo / Built with SvelteKit & Nim</span>
       <span>qouver.com</span>
     </div>
   </div>

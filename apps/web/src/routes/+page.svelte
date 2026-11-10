@@ -1,14 +1,19 @@
 <script lang="ts">
   import SeoHead from '$lib/components/SeoHead.svelte';
-  import ProjectCard from '$lib/components/ProjectCard.svelte';
+  import ProjectRow from '$lib/components/ProjectRow.svelte';
   import { projects } from '$lib/data/projects.js';
+  import { journalArticles } from '$lib/data/journal.js';
   import {
     siteName,
     siteTagline,
     siteDescription,
     siteUrl,
     contactEmail,
+    githubOrgUrl,
+    githubMaintainerUrl,
   } from '$lib/site.js';
+
+  const latestNote = journalArticles[0];
 
   const schemaJson = JSON.stringify([
     {
@@ -45,70 +50,130 @@
   {@html `<script type="application/ld+json">${schemaJson}</script>`}
 </svelte:head>
 
-<!-- Hero Section -->
-<section class="hero container">
-  <div class="hero-inner">
-    <h1 class="display hero__display">
-      Built from what others <em>leave behind.</em>
-    </h1>
-    <p class="lead hero__lead">{siteDescription}</p>
+<section class="rd-hero">
+  <div class="container">
+    <div class="rd-hero__grid">
+      <h1 class="rd-hero__title">A home for systems and ideas.</h1>
+
+      <div class="rd-hero__aside">
+        <p class="rd-hero__deck">
+          Qouver finds overlooked opportunities, turns them into useful systems,
+          and shares what it learns.
+        </p>
+        <div class="rd-hero__actions">
+          <a class="rd-btn" href="#systems">Read the systems</a>
+          <a class="rd-link-line" href="mailto:{contactEmail}">{contactEmail}</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="rd-hero__motto">
+      <p>Built from what others leave behind.</p>
+      <span>qouver.com</span>
+    </div>
   </div>
 </section>
 
-<!-- Philosophy / Approach Strip -->
-<section class="strip section--tight">
-  <div class="container strip__grid">
-    <div class="strip__item">
-      <span class="strip__num">01</span>
+<section class="rd-ledger-section" id="systems">
+  <div class="container">
+    <div class="rd-sec-head">
+      <div>
+        <p class="rd-kicker">Production systems</p>
+        <h2>Four systems, built and operated.</h2>
+      </div>
+      <p class="rd-sec-head__note">
+        Three run in production today; one was retired into Majadu. Status is
+        marked on every entry, and live systems open from here.
+      </p>
+    </div>
+
+    <div class="rd-ledger">
+      <div class="rd-ledger__labels" aria-hidden="true">
+        <span>Index</span>
+        <span>System</span>
+        <span>Stack</span>
+        <span>Open</span>
+      </div>
+
+      {#each projects as project}
+        <ProjectRow {project} />
+      {/each}
+    </div>
+  </div>
+</section>
+
+<section class="rd-method" aria-label="How Qouver works">
+  <div class="container rd-method__grid">
+    <div class="rd-method__item">
+      <span class="rd-method__num">01</span>
       <h3>Find value in plain sight.</h3>
       <p>
-        Valuable things often sit unindexed or overlooked: the gap in a community, the pattern in a dataset, the tool nobody bothered to build.
+        Valuable things often sit unindexed or overlooked: the gap in a community,
+        the pattern in a dataset, the tool nobody bothered to build.
       </p>
     </div>
-    <div class="strip__item">
-      <span class="strip__num">02</span>
+    <div class="rd-method__item">
+      <span class="rd-method__num">02</span>
       <h3>Build real production systems.</h3>
       <p>
-        Not prototypes. Not pitch decks. Software running in production, handling real workload, and earning its place.
+        Not prototypes. Not pitch decks. Software running in production, handling
+        real workload, and earning its place.
       </p>
     </div>
-    <div class="strip__item">
-      <span class="strip__num">03</span>
+    <div class="rd-method__item">
+      <span class="rd-method__num">03</span>
       <h3>Document every lesson.</h3>
       <p>
-        What is built gets documented. Architecture post-mortems and open technical essays mean the next problem starts with context.
+        What is built gets documented. Architecture post-mortems and open technical
+        essays mean the next problem starts with context.
       </p>
     </div>
   </div>
 </section>
 
-<!-- Production Systems Section -->
-<section class="section container">
-  <div class="section-head">
-    <h2 class="h2">Production Systems</h2>
-    <p class="section-head__subtitle">
-      Active software systems built and operated by Qouver.
-    </p>
-  </div>
-  <div class="projects-grid">
-    {#each projects as project}
-      <ProjectCard {project} />
-    {/each}
-  </div>
-  <div class="mt-2">
-    <a href="/projects" class="btn btn--secondary">All Systems</a>
+<section class="rd-notes" id="notes">
+  <div class="container rd-notes__grid">
+    <p class="rd-kicker">Latest note</p>
+    {#if latestNote}
+      <article class="rd-notes__main">
+        <p class="rd-notes__meta">
+          {latestNote.date} / {latestNote.category} / {latestNote.readTime}
+        </p>
+        <h2 class="rd-notes__title">
+          <a href="/journal/{latestNote.slug}">{latestNote.title}</a>
+        </h2>
+        <p class="rd-notes__summary">{latestNote.summary}</p>
+        <a class="rd-link-line" href="/journal">All notes</a>
+      </article>
+    {/if}
   </div>
 </section>
 
-<!-- Operational Manifesto Section -->
-<section class="manifesto section">
+<section class="rd-manifesto" id="about">
   <div class="container">
-    <p class="manifesto__quote">
-      Find what others walk past. <em>Build something useful from it.</em> Leave notes for whoever comes next.
+    <p class="rd-manifesto__quote">
+      Find what others walk past. <em>Build something useful from it.</em> Leave notes
+      for whoever comes next.
     </p>
-    <div class="manifesto__row">
-      <span class="manifesto__lbl">Operational Manifesto</span>
-      <a href="/about" class="link-action link-action--light">Read the story</a>
+    <div class="rd-manifesto__row">
+      <span class="rd-kicker rd-kicker--on-ink">Operational manifesto</span>
+      <a class="rd-link-line rd-link-line--light" href="/about">Read the story</a>
+    </div>
+  </div>
+</section>
+
+<section class="rd-contact-band" id="contact">
+  <div class="container rd-contact-band__grid">
+    <div>
+      <h2>Questions, a project idea, or something worth talking about.</h2>
+      <p class="rd-contact-band__copy">Direct is fine.</p>
+    </div>
+    <div>
+      <a class="rd-mailto" href="mailto:{contactEmail}">{contactEmail}</a>
+      <div class="rd-contact-band__links">
+        <a href={githubOrgUrl} target="_blank" rel="noopener">github.com/qouver</a>
+        <a href={githubMaintainerUrl} target="_blank" rel="noopener">github.com/nferdazel</a>
+      </div>
     </div>
   </div>
 </section>

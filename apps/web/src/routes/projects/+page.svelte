@@ -1,7 +1,12 @@
 <script lang="ts">
   import SeoHead from '$lib/components/SeoHead.svelte';
-  import ProjectCard from '$lib/components/ProjectCard.svelte';
+  import ProjectRow from '$lib/components/ProjectRow.svelte';
   import { projects } from '$lib/data/projects.js';
+  import {
+    contactEmail,
+    githubOrgUrl,
+    githubMaintainerUrl,
+  } from '$lib/site.js';
 </script>
 
 <SeoHead
@@ -10,20 +15,51 @@
   path="/projects"
 />
 
-<section class="page-head container">
-  <div class="page-head__meta">
-    <span class="badge badge--bronze">CATALOGUE</span>
+<section class="rd-page-head">
+  <div class="container">
+    <div class="rd-page-head__meta">
+      <p class="rd-kicker">Catalogue / four systems</p>
+    </div>
+    <h1 class="rd-page-title">Production Systems</h1>
+    <p class="rd-page-head__lead">
+      Live, in production, or archived, each one earned its place. Built to solve
+      real problems with disciplined software craft.
+    </p>
+    <p class="rd-page-head__contact">
+      Working on something similar? <a href="mailto:{contactEmail}">{contactEmail}</a>
+    </p>
   </div>
-  <h1 class="page-title">Production Systems</h1>
-  <p class="lead mt-2">
-    Live, in production, or archived, each one earned its place. Built to solve real problems with disciplined software craft.
-  </p>
 </section>
 
-<section class="section container">
-  <div class="projects-grid">
-    {#each projects as project}
-      <ProjectCard {project} />
-    {/each}
+<section class="rd-catalogue">
+  <div class="container">
+    <div class="rd-ledger">
+      <div class="rd-ledger__labels" aria-hidden="true">
+        <span>Index</span>
+        <span>System</span>
+        <span>Stack</span>
+        <span>Open</span>
+      </div>
+
+      {#each projects as project}
+        <ProjectRow {project} level={2} showFocus />
+      {/each}
+    </div>
+  </div>
+</section>
+
+<section class="rd-contact-band" id="contact">
+  <div class="container rd-contact-band__grid">
+    <div>
+      <h2>Questions, a project idea, or something worth talking about.</h2>
+      <p class="rd-contact-band__copy">Direct is fine.</p>
+    </div>
+    <div>
+      <a class="rd-mailto" href="mailto:{contactEmail}">{contactEmail}</a>
+      <div class="rd-contact-band__links">
+        <a href={githubOrgUrl} target="_blank" rel="noopener">github.com/qouver</a>
+        <a href={githubMaintainerUrl} target="_blank" rel="noopener">github.com/nferdazel</a>
+      </div>
+    </div>
   </div>
 </section>
