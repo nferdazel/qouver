@@ -14,6 +14,8 @@
   } from '$lib/site.js';
 
   const latestNote = journalArticles[0];
+  const liveCount = projects.filter((project) => project.status !== 'Archived').length;
+  const archivedCount = projects.length - liveCount;
 
   const schemaJson = JSON.stringify([
     {
@@ -82,8 +84,8 @@
         <h2>Four systems, built and operated.</h2>
       </div>
       <p class="rd-sec-head__note">
-        Three run in production today; one was retired into Majadu. Status is
-        marked on every entry, and live systems open from here.
+        {liveCount} run in production today; {archivedCount} are archived. Status
+        is marked on every entry, and live systems open from here.
       </p>
     </div>
 
