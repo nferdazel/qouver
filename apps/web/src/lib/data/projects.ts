@@ -38,13 +38,11 @@ export const projects: Project[] = [
     category: 'Simulation',
     tagline: 'Airline tycoon simulation.',
     description:
-      "Run your own airline: build a fleet, open routes, and grow an economy that keeps moving while you're away. The whole world runs on a server-side simulation engine, so your device just plays it and everything stays fair and consistent. Live now at skyward.qouver.com.",
+      "Run your own airline: build a fleet, open routes, and grow an economy that keeps moving while you're away. The whole world runs on a server-side simulation engine, so your device just plays it and everything stays fair and consistent.",
     focus: ['Simulation', 'Strategy', 'Systems design'],
-    status: 'Live',
+    status: 'Archived',
     stack: 'Flutter · Go · Postgres',
     stackItems: ['Flutter', 'Go', 'Postgres'],
-    url: 'https://skyward.qouver.com',
-    urlLabel: 'VISIT',
     caseStudy: {
       title: 'Server-Side Tick Simulation Engine & Authoritative State',
       overview:
