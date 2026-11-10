@@ -64,6 +64,30 @@ git reset --hard origin/main
 REV=$(git rev-parse HEAD)
 log "==> Building commit: $REV"
 
+# 4b. Quadlet hardening gate (fail-closed). The VPS unit runs with
+# NoNewPrivileges, DropCapability=ALL and ReadOnly; never overwrite it with a
+# weaker copy from the monorepo (2026-11-10 22:18). Abort before building.
+UNIT_SRC="$MONO_DIR/ops/systemd/qouver-api.container"
+[ -f "$UNIT_SRC" ] || die "Quadlet unit missing: $UNIT_SRC — deploy aborted, unit on VPS untouched."
+for key in NoNewPrivileges=true DropCapability=ALL ReadOnly=true; do
+  k="${key%%=*}"; v="${key#*=}"
+  if ! grep -qEi "^[[:space:]]*${k}[[:space:]]*=[[:space:]]*${v}[[:space:]]*$" "$UNIT_SRC"; then
+    die "Quadlet hardening gate failed: $UNIT_SRC lacks ${key} — deploy aborted, unit on VPS untouched."
+  fi
+done
+log "==> Quadlet hardening gate passed (NoNewPrivileges, DropCapability=ALL, ReadOnly)"
+
+# Rehearsal: DEPLOY_DRY_RUN=1 stops here, before any build, restart or write.
+if [ "${DEPLOY_DRY_RUN:-0}" = "1" ]; then
+  log "==> DRY RUN: gate passed for commit $REV, stopping before build"
+  if diff -u "$HOME/.config/containers/systemd/qouver-api.container" "$UNIT_SRC"; then
+    log "==> DRY RUN: live unit already matches, nothing to write"
+  else
+    log "==> DRY RUN: live unit would be replaced (mode 600), service restarted after build"
+  fi
+  exit 0
+fi
+
 # Self-update deploy script safely using rename
 REPO_SCRIPT="$MONO_DIR/ops/scripts/deploy-vps.sh"
 SELF_SCRIPT="$APP_DIR/scripts/deploy-vps.sh"
@@ -108,12 +132,12 @@ if podman image exists localhost/qouver-api:local; then
 fi
 podman build -t localhost/qouver-api:local -f ops/container/qouver-api.Dockerfile .
 
-# 7. Sync systemd quadlet container definition
+# 7. Sync systemd quadlet container definition (mode 600, verified above)
 UNIT_DIR="$HOME/.config/containers/systemd"
 mkdir -p "$UNIT_DIR"
-if [ -f "$MONO_DIR/ops/systemd/qouver-api.container" ]; then
-  cp -f "$MONO_DIR/ops/systemd/qouver-api.container" "$UNIT_DIR/qouver-api.container"
-fi
+install -m 600 "$UNIT_SRC" "$UNIT_DIR/qouver-api.container.new.$$" \
+  && mv -f "$UNIT_DIR/qouver-api.container.new.$$" "$UNIT_DIR/qouver-api.container" \
+  || die "Could not install $UNIT_SRC"
 
 # 8. Restart API container
 log "==> Reloading systemd and restarting qouver-api..."

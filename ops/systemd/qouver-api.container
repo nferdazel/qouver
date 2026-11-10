@@ -4,7 +4,6 @@
 Description=Qouver API (qouver.com, Nim + PostgreSQL)
 After=network-online.target
 Wants=network-online.target
-
 [Container]
 Image=localhost/qouver-api:local
 ContainerName=qouver-api
@@ -12,10 +11,13 @@ Network=qouver
 PublishPort=127.0.0.1:8091:8091
 Pull=never
 EnvironmentFile=/srv/qouver/apps/qouver/env/qouver-prod.env
-
+NoNewPrivileges=true
+DropCapability=ALL
+ReadOnly=true
+Tmpfs=/tmp
 [Service]
 Restart=always
 RestartSec=3
-
+MemoryMax=512M
 [Install]
 WantedBy=default.target
