@@ -7,10 +7,14 @@ RUN apk add --no-cache postgresql-dev gcc musl-dev git
 COPY qouver.nimble ./
 RUN nimble install -y -d
 
+# Commit being built, stamped into the binary so /healthz reports it and each
+# commit yields a distinct image ID (a usable :prev for rollback).
+ARG GIT_REV=dev
+
 COPY shared/ ./shared/
 COPY apps/api/ ./apps/api/
 
-RUN nim c -d:release --opt:speed --hints:off --warnings:on \
+RUN nim c -d:release -d:GitRev="${GIT_REV}" --opt:speed --hints:off --warnings:on \
     -p:shared -p:apps/api/src \
     -o:/app/qouver-api apps/api/src/main.nim
 

@@ -144,6 +144,7 @@ components:
         - status
         - database
         - version
+        - revision
         - uptimeSeconds
       properties:
         status:
@@ -155,6 +156,10 @@ components:
         version:
           type: string
           example: "0.1.0"
+        revision:
+          type: string
+          description: Git commit the binary was built from.
+          example: "93c6581"
         uptimeSeconds:
           type: integer
           example: 3600

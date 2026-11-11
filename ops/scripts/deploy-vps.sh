@@ -130,7 +130,9 @@ cd "$MONO_DIR"
 if podman image exists localhost/qouver-api:local; then
   podman tag localhost/qouver-api:local localhost/qouver-api:prev 2>/dev/null || true
 fi
-podman build -t localhost/qouver-api:local -f ops/container/qouver-api.Dockerfile .
+podman build -t localhost/qouver-api:local \
+  --build-arg GIT_REV="$REV" \
+  -f ops/container/qouver-api.Dockerfile .
 
 # 7. Sync systemd quadlet container definition (mode 600, verified above)
 UNIT_DIR="$HOME/.config/containers/systemd"
@@ -170,6 +172,9 @@ else
   fi
   exit 1
 fi
+
+# 9b. Drop dangling images; :local and :prev stay (the retention contract)
+podman image prune -f >/dev/null 2>&1 || true
 
 # 10. Record deployed revision
 printf '%s\n' "$REV" > "$STATE_FILE"

@@ -134,6 +134,11 @@ export interface components {
             database: string;
             /** @example 0.1.0 */
             version: string;
+            /**
+             * @description Git commit the binary was built from.
+             * @example 93c6581
+             */
+            revision: string;
             /** @example 3600 */
             uptimeSeconds: number;
         };
