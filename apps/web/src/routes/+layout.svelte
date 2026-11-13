@@ -10,6 +10,8 @@
 
   let { children } = $props();
 
+  const isHome = $derived(page.url.pathname === '/');
+
   function isActive(path: string): boolean {
     const current = page.url.pathname;
     return current === path || (path !== '/' && current.startsWith(`${path}/`));
@@ -18,7 +20,7 @@
 
 <a class="skip-link" href="#main">Skip to content</a>
 
-<header class="site-header">
+<header class="site-header" class:site-header--home={isHome}>
   <div class="container site-header__inner">
     <a href="/" class="brand" aria-label="Qouver, home">
       <QMark size="30" class="brand__mark" accentDot={true} />
@@ -38,7 +40,7 @@
   {@render children()}
 </main>
 
-<footer class="site-footer">
+<footer class="site-footer" class:site-footer--home={isHome}>
   <div class="container">
     <div class="rd-footer__top">
       <div>

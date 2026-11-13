@@ -52,10 +52,18 @@
   {@html `<script type="application/ld+json">${schemaJson}</script>`}
 </svelte:head>
 
+<div class="rd-home">
 <section class="rd-hero">
   <div class="container">
     <div class="rd-hero__grid">
-      <h1 class="rd-hero__title">A home for systems and ideas.</h1>
+      <h1 class="rd-hero__title">
+        A home for <span class="rd-hero__mark">systems<svg
+            class="rd-hero__mark-stroke"
+            viewBox="0 0 300 16"
+            preserveAspectRatio="none"
+            aria-hidden="true"><path d="M3 10.4C58 4.2 132 14.2 205 7.6 244 4 276 6.4 297 8.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" opacity=".9"/><path d="M16 14.2C74 9.4 150 16 226 11.2" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity=".45"/></svg></span>
+        and ideas.
+      </h1>
 
       <div class="rd-hero__aside">
         <p class="rd-hero__deck">
@@ -153,6 +161,18 @@
 
 <section class="rd-manifesto" id="about">
   <div class="container">
+    <svg
+      class="rd-manifesto__mark"
+      viewBox="0 0 54 44"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+    >
+      <path d="M8 34c-3-9 1-18 12-24" />
+      <path d="M30 34c-3-9 1-18 12-24" />
+    </svg>
     <p class="rd-manifesto__quote">
       Find what others walk past. <em>Build something useful from it.</em> Leave notes
       for whoever comes next.
@@ -179,3 +199,4 @@
     </div>
   </div>
 </section>
+</div>

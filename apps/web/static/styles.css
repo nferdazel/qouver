@@ -2143,3 +2143,160 @@ h3,
 .rd-catalogue {
   padding-block: clamp(2rem, 4vw, 3rem) clamp(3rem, 6vw, 5rem);
 }
+
+/* ==========================================================================
+   22. Home: Ink and Grain (direction B)
+   Home only. One mark ink besides black, one paper grain, three drawn marks.
+   Everything outside .rd-home keeps the broadsheet accent untouched.
+   ========================================================================== */
+
+:root {
+  --ink-mark: #22306b;
+}
+
+/* The one non-black ink. Scoped to home so /projects keeps --accent. */
+.rd-home,
+.site-header--home,
+.site-footer--home {
+  --accent: var(--ink-mark);
+}
+
+/* Generated paper grain: a single inline feTurbulence, no image request. */
+.rd-home::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.86' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+  opacity: 0.3;
+}
+
+/* Drawn stroke under the word the headline lands on. */
+.rd-home .rd-hero__mark {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.rd-home .rd-hero__mark-stroke {
+  position: absolute;
+  left: -1%;
+  bottom: -0.1em;
+  width: 102%;
+  height: 0.2em;
+  overflow: visible;
+  color: var(--ink-mark);
+}
+
+/* Status read as a drawn oval rather than a square dot in a box. */
+.rd-home .rd-status {
+  gap: 0.45rem;
+  padding: 0;
+  border: 0;
+}
+
+.rd-home .rd-status__dot {
+  width: 1.5rem;
+  height: 0.8rem;
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  transform: rotate(-6deg);
+}
+
+/* Manifesto moves to paper; the ink stays for the contact band alone. */
+.rd-home .rd-manifesto {
+  background: transparent;
+  border-top: 1px solid var(--rule);
+  color: var(--ink);
+  padding-block: clamp(3.5rem, 8vw, 7rem);
+  text-align: center;
+}
+
+.rd-home .rd-manifesto__mark {
+  width: 3.25rem;
+  height: 2.65rem;
+  margin: 0 auto 1.4rem;
+  color: var(--ink-mark);
+}
+
+.rd-home .rd-manifesto__quote {
+  margin-inline: auto;
+  max-width: 30ch;
+  font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+
+.rd-home .rd-manifesto__quote em {
+  font-style: normal;
+  color: var(--ink-mark);
+}
+
+.rd-home .rd-manifesto__row {
+  justify-content: center;
+  gap: 1rem 1.6rem;
+  margin-top: 2.1rem;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.rd-home .rd-manifesto__row .rd-kicker--on-ink {
+  color: var(--ink-3);
+}
+
+.rd-home .rd-manifesto__row .rd-link-line--light {
+  color: var(--ink-mark);
+  border-color: var(--ink-mark);
+}
+
+.rd-home .rd-manifesto__row .rd-link-line--light:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* Contact band: the single flood of ink on the page. */
+.rd-home .rd-contact-band {
+  background: var(--ink-mark);
+  border-top: 0;
+}
+
+.rd-home .rd-contact-band h2 {
+  color: var(--paper);
+}
+
+.rd-home .rd-contact-band__copy {
+  color: rgba(237, 234, 227, 0.8);
+}
+
+.rd-home .rd-mailto {
+  color: var(--paper);
+  border-color: rgba(237, 234, 227, 0.6);
+}
+
+.rd-home .rd-mailto:hover {
+  color: var(--paper);
+  border-color: var(--paper);
+}
+
+.rd-home .rd-contact-band__links a {
+  color: rgba(237, 234, 227, 0.84);
+}
+
+.rd-home .rd-contact-band__links a:hover {
+  color: var(--paper);
+}
+
+/* The masthead and footer marks carry the same ink on home, no vermilion. */
+.site-header--home .q-mark__tail,
+.site-footer--home .q-mark__tail {
+  stroke: var(--ink-mark);
+}
+
+.site-header--home .q-mark__dot--accent,
+.site-footer--home .q-mark__dot--accent {
+  fill: var(--ink-mark);
+}
