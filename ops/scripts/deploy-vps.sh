@@ -37,6 +37,11 @@ flock -w 1200 200 || die "Another deploy is still running after 1200s ($LOCK_FIL
 
 log "==> Deploy triggered for $REPO ($REF)"
 
+# CI gate override: explicit, default off, and loud at the top of the run.
+if [ "${DEPLOY_SKIP_CI_GATE:-0}" = "1" ]; then
+  log "==> CI GATE OVERRIDDEN (DEPLOY_SKIP_CI_GATE=1): this deploy builds without verifying CI for the commit"
+fi
+
 # 3. Setup environment PATH (fnm / node / corepack / pnpm)
 if [ -d "$HOME/.local/share/fnm" ]; then
   export PATH="$HOME/.local/share/fnm/current/bin:$HOME/.local/share/fnm/aliases/default/bin:$HOME/.local/share/pnpm/bin:$HOME/.local/bin:$PATH"
@@ -63,6 +68,93 @@ git fetch origin main
 git reset --hard origin/main
 REV=$(git rev-parse HEAD)
 log "==> Building commit: $REV"
+
+# 4a. CI gate (fail-closed). The deploy never builds a commit whose push CI run
+# is not green. On 2026-11-13 the build for f9ecf4b started 17:56:42 WIB while
+# CI run 43413033021 reached success at 17:58:33 WIB, so production carried the
+# new build before its own CI finished. Polls the push run for exactly $REV.
+if [ "${DEPLOY_SKIP_CI_GATE:-0}" != "1" ]; then
+  CI_GATE_REPO="${CI_GATE_REPO:-nferdazel/qouver}"
+  CI_GATE_API="https://api.github.com/repos/$CI_GATE_REPO"
+  CI_GATE_ENV_FILE="$APP_DIR/env/deploy.env"
+  CI_GATE_TIMEOUT="${CI_GATE_TIMEOUT_SEC:-240}"
+  CI_GATE_INTERVAL="${CI_GATE_INTERVAL_SEC:-10}"
+
+  # Token from the VPS environment file or the process environment, never the
+  # repo. The API answers anonymously for this public repo (60 req/h) and the
+  # gate names the mode it used, so a missing token is visible, never silent.
+  # shellcheck source=/dev/null
+  if [ -z "${QOUVER_GITHUB_TOKEN:-}" ] && [ -f "$CI_GATE_ENV_FILE" ]; then
+    set -a; . "$CI_GATE_ENV_FILE"; set +a
+  fi
+  CI_TOKEN="${QOUVER_GITHUB_TOKEN:-${GITHUB_TOKEN:-}}"
+  CURL_AUTH=()
+  CI_AUTH_MODE="anonymous"
+  if [ -n "$CI_TOKEN" ]; then
+    CURL_AUTH=(-H "Authorization: Bearer $CI_TOKEN")
+    CI_AUTH_MODE="token"
+  fi
+  log "==> CI gate: waiting for push CI on $REV (auth=$CI_AUTH_MODE, budget ${CI_GATE_TIMEOUT}s)"
+
+  ci_gate_start=$(date +%s)
+  ci_gate_last="no run yet"
+  while :; do
+    if [ $(( $(date +%s) - ci_gate_start )) -ge "$CI_GATE_TIMEOUT" ]; then
+      die "CI gate: no green push run for $REV within ${CI_GATE_TIMEOUT}s (last seen: $ci_gate_last) — refusing to build"
+    fi
+
+    CI_RESP=$(curl -sS --max-time 10 "${CURL_AUTH[@]}" \
+      -H "Accept: application/vnd.github+json" \
+      -w '\n%{http_code}' \
+      "$CI_GATE_API/actions/runs?head_sha=$REV&event=push" 2>/dev/null) || CI_RESP=$'\n000'
+    CI_CODE="${CI_RESP##*$'\n'}"
+    CI_BODY="${CI_RESP%$'\n'*}"
+    [ "$CI_CODE" = "200" ] || die "CI gate: GitHub API returned HTTP $CI_CODE for $REV — refusing to build (auth=$CI_AUTH_MODE)"
+
+    CI_BODY=$(printf '%s' "$CI_BODY" | tr -d ' \n\r\t')
+    CI_TOTAL=$(printf '%s' "$CI_BODY" | grep -o '"total_count":[0-9]*' | head -1 | cut -d: -f2 || true)
+    [ -n "$CI_TOTAL" ] || die "CI gate: unreadable GitHub API response for $REV — refusing to build"
+
+    CI_RUNS=0
+    CI_ALL_GREEN=1
+    if [ "$CI_TOTAL" -gt 0 ]; then
+      CI_OBJS=$(printf '%s' "$CI_BODY" | sed 's/{"id":/\n{"id":/g' | grep '^{"id":' || true)
+      while IFS= read -r ci_obj; do
+        # Only workflow run objects carry workflow_id; the same response embeds
+        # the repository, actor and head commit objects, which are not runs.
+        case "$ci_obj" in
+          *'"workflow_id":'*) : ;;
+          *) continue ;;
+        esac
+        ci_id=$(printf '%s' "$ci_obj" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2 || true)
+        ci_state=$(printf '%s' "$ci_obj" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
+        ci_concl=$(printf '%s' "$ci_obj" | grep -o '"conclusion":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
+        CI_RUNS=$((CI_RUNS + 1))
+        CI_RUN_ID="$ci_id"
+        ci_gate_last="run $ci_id ${ci_concl:-$ci_state}"
+        if [ "$ci_state" = "completed" ] && [ "$ci_concl" != "success" ]; then
+          die "CI gate: run $ci_id for $REV concluded '${ci_concl:-none}' — refusing to build"
+        fi
+        if [ "$ci_state" != "completed" ]; then
+          CI_ALL_GREEN=0
+        fi
+      done <<< "$CI_OBJS"
+    fi
+
+    if [ "$CI_RUNS" -gt 0 ] && [ "$CI_ALL_GREEN" -eq 1 ]; then
+      ci_gate_elapsed=$(( $(date +%s) - ci_gate_start ))
+      if [ "$ci_gate_elapsed" -ge 60 ]; then
+        ci_gate_dur="$((ci_gate_elapsed / 60))m$((ci_gate_elapsed % 60))s"
+      else
+        ci_gate_dur="${ci_gate_elapsed}s"
+      fi
+      log "==> CI gate: run $CI_RUN_ID success ($ci_gate_dur)"
+      break
+    fi
+
+    sleep "$CI_GATE_INTERVAL"
+  done
+fi
 
 # 4b. Quadlet hardening gate (fail-closed). The VPS unit runs with
 # NoNewPrivileges, DropCapability=ALL and ReadOnly; never overwrite it with a
