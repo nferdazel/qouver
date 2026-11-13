@@ -1,0 +1,5 @@
+{
+  "ref": "refs/heads/main",
+  "after": "<full 40-char commit sha the CI run went green for>",
+  "repository": { "name": "qouver" }
+}

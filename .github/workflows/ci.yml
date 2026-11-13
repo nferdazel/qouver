@@ -80,3 +80,48 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # The only deploy trigger. CI a push to main once it is green, naming the commit
+  # it verified; the VPS script builds that commit and nothing else. The VPS never
+  # asks GitHub anything, so it needs no GitHub credential and no rate limit.
+  # The daemon runs the deploy synchronously, so this step's HTTP answer arrives
+  # when the deploy script exits: 200 = deployed, anything else = deploy failed.
+  deploy:
+    name: "Deploy: trigger qouver webhook"
+    needs: [verify, security]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Sign and POST the deploy trigger
+        env:
+          HOOK_URL: https://api.qouver.com/hooks/qouver
+          HOOK_SECRET: ${{ secrets.QOUVER_HOOK_SECRET }}
+          COMMIT_SHA: ${{ github.sha }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          REF_NAME: ${{ github.ref }}
+        run: |
+          if [ -z "$HOOK_SECRET" ]; then
+            echo "::error::QOUVER_HOOK_SECRET is not set for this repository; refusing to deploy"
+            exit 1
+          fi
+          printf '{"ref":"%s","after":"%s","repository":{"name":"%s"}}' \
+            "$REF_NAME" "$COMMIT_SHA" "$REPO_NAME" > trigger.json
+          rm -f answer.txt
+          SIGNATURE="sha256=$(openssl dgst -sha256 -hmac "$HOOK_SECRET" -binary trigger.json \
+            | od -An -tx1 | tr -d ' \n')"
+          if ! CODE=$(curl -sS --max-time 600 -o answer.txt -w '%{http_code}' \
+            -X POST \
+            -H 'Content-Type: application/json' \
+            -H "X-Hub-Signature-256: $SIGNATURE" \
+            -H 'X-GitHub-Event: push' \
+            --data-binary @trigger.json "$HOOK_URL"); then
+            CODE="000"
+          fi
+          echo "deploy hook answered HTTP $CODE for $COMMIT_SHA"
+          if [ "$CODE" != "200" ]; then
+            echo "::error::Deploy webhook did not accept the trigger (HTTP $CODE)"
+            cat answer.txt 2>/dev/null || true
+            exit 1
+          fi
+

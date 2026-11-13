@@ -11,6 +11,10 @@
       {
         "source": "payload",
         "name": "ref"
+      },
+      {
+        "source": "payload",
+        "name": "after"
       }
     ],
     "trigger-rule": {
