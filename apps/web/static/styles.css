@@ -2300,3 +2300,92 @@ h3,
 .site-footer--home .q-mark__dot--accent {
   fill: var(--ink-mark);
 }
+
+/* ==========================================================================
+   23. Print: home only
+   Home prints on paper: no grain layer, no ink flood. Scoped to .rd-home and
+   the home header/footer, so /projects and the journal keep the default print
+   output untouched.
+   ========================================================================== */
+
+@media print {
+  /* Grain is a fixed page layer; it must not follow the page onto paper. */
+  .rd-home::after {
+    content: none;
+  }
+
+  /* Home prints on white stock, not on a tinted sheet. */
+  body:has(.rd-home),
+  .rd-home {
+    background: #fff;
+  }
+
+  /* Every dark band becomes paper with ink text, never a dark block. */
+  .site-footer--home,
+  .rd-home .rd-manifesto,
+  .rd-home .rd-contact-band {
+    background: none;
+    color: var(--ink);
+  }
+
+  .site-footer--home {
+    border-top: 1px solid var(--ink);
+  }
+
+  .rd-home .rd-contact-band {
+    border-top: 1px solid var(--ink);
+  }
+
+  .site-footer--home p,
+  .site-footer--home h4,
+  .site-footer--home a,
+  .site-footer--home .brand__word,
+  .site-footer--home .site-footer__bottom,
+  .rd-home .rd-manifesto__quote,
+  .rd-home .rd-manifesto__row .rd-kicker--on-ink,
+  .rd-home .rd-contact-band h2,
+  .rd-home .rd-contact-band__copy,
+  .rd-home .rd-mailto,
+  .rd-home .rd-contact-band__links a {
+    color: var(--ink);
+  }
+
+  .site-footer--home .site-footer__bottom {
+    border-top-color: var(--ink);
+  }
+
+  /* Links read as links on paper: ink text with a visible underline. */
+  .rd-home a,
+  .site-footer--home a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .rd-home .rd-mailto,
+  .rd-home .rd-contact-band__links a {
+    border-color: var(--ink);
+  }
+
+  /* Solid buttons flip to outlined ink: a filled block would print as a black
+     rectangle, and its paper-coloured label would vanish. */
+  .rd-home .rd-btn {
+    background: none;
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+
+  /* Break rules: a ledger row, a method item or the pull quote never splits
+     across two sheets. */
+  .rd-home .rd-ledger-row,
+  .rd-home .rd-method__item,
+  .rd-home .rd-manifesto,
+  .site-footer--home {
+    break-inside: avoid;
+  }
+
+  /* The mailto already carries a rule as its underline; one line, not two. */
+  .rd-home .rd-mailto {
+    text-decoration: none;
+  }
+}
