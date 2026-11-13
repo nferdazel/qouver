@@ -21,7 +21,7 @@ LOG="$APP_DIR/logs/deploy.log"
 STATE_FILE="$APP_DIR/.deployed_rev"
 LOCK_FILE="$APP_DIR/.deploy.lock"
 WEB_DIR="$APP_DIR/web"
-HEALTH_URL="http://127.0.0.1:8091/healthz"
+HEALTH_URL="${QOUVER_HEALTH_URL:-http://127.0.0.1:8091/healthz}"
 
 mkdir -p "$APP_DIR/logs" "$BIN_DIR" "$APP_DIR/env" "$APP_DIR/scripts"
 
@@ -165,11 +165,16 @@ log "==> Reloading systemd and restarting qouver-api..."
 systemctl --user daemon-reload
 systemctl --user restart qouver-api
 
-# 9. Health check gate
+# 9. Health check gate. A 200 alone is not proof: the container that answers
+# must report the revision this deploy built, otherwise a restart that silently
+# kept the old image would pass the gate and record the new revision anyway.
 log "==> Verifying health gate ($HEALTH_URL)..."
 HEALTHY=0
+LIVE_REV=""
 for i in $(seq 1 15); do
-  if curl -s -f --max-time 3 "$HEALTH_URL" >/dev/null 2>&1; then
+  LIVE_REV=$(curl -s -f --max-time 3 "$HEALTH_URL" 2>/dev/null \
+    | sed -n 's/.*"revision"[[:space:]]*:[[:space:]]*"\([0-9a-f]\{40\}\)".*/\1/p' || true)
+  if [ "$LIVE_REV" = "$REV" ]; then
     HEALTHY=1
     break
   fi
@@ -177,17 +182,35 @@ for i in $(seq 1 15); do
 done
 
 if [ "$HEALTHY" -eq 1 ]; then
-  log "==> Health gate passed (200 OK)"
+  log "==> Health gate passed (200 OK, revision $LIVE_REV)"
 else
-  log "ERROR: Health gate failed ($HEALTH_URL not responding). Rolling back..."
+  PREV_REV=$(cat "$STATE_FILE" 2>/dev/null || true)
+  log "ERROR: Health gate failed ($HEALTH_URL did not serve revision $REV, last seen: ${LIVE_REV:-no answer}). Rolling back to ${PREV_REV:-previous image}..."
   if podman image exists localhost/qouver-api:prev; then
     podman tag localhost/qouver-api:prev localhost/qouver-api:local
     systemctl --user restart qouver-api || true
+    ROLLED_REV=""
+    for i in $(seq 1 15); do
+      ROLLED_REV=$(curl -s -f --max-time 3 "$HEALTH_URL" 2>/dev/null \
+        | sed -n 's/.*"revision"[[:space:]]*:[[:space:]]*"\([0-9a-f]\{40\}\)".*/\1/p' || true)
+      [ -n "$ROLLED_REV" ] && break
+      sleep 2
+    done
+    if [ -n "$PREV_REV" ] && [ "$ROLLED_REV" = "$PREV_REV" ]; then
+      log "==> Rollback verified: serving previous revision $PREV_REV"
+    elif [ -n "$ROLLED_REV" ]; then
+      log "WARNING: rollback is serving ${ROLLED_REV}, expected ${PREV_REV:-unknown}"
+    else
+      log "WARNING: rollback could not be verified ($HEALTH_URL not answering)"
+    fi
+  else
+    log "ERROR: no localhost/qouver-api:prev image to roll back to"
   fi
   if [ -d "$APP_DIR/web.prev" ]; then
     rm -rf "$APP_DIR/web"
     mv "$APP_DIR/web.prev" "$APP_DIR/web"
     restorecon -RF "$APP_DIR/web/" 2>/dev/null || true
+    log "==> Web assets restored from web.prev"
   fi
   exit 1
 fi
