@@ -3,6 +3,7 @@
     "id": "qouver",
     "execute-command": "/srv/qouver/apps/qouver/scripts/deploy-vps.sh",
     "command-working-directory": "/srv/qouver/apps/qouver",
+    "include-command-output-in-response": true,
     "pass-arguments-to-command": [
       {
         "source": "payload",
