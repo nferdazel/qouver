@@ -84,8 +84,10 @@ jobs:
   # The only deploy trigger. CI a push to main once it is green, naming the commit
   # it verified; the VPS script builds that commit and nothing else. The VPS never
   # asks GitHub anything, so it needs no GitHub credential and no rate limit.
-  # The daemon runs the deploy synchronously, so this step's HTTP answer arrives
-  # when the deploy script exits: 200 = deployed, anything else = deploy failed.
+  # The hook returns its answer only when the deploy script exits (the qouver
+  # hook sets include-command-output-in-response; without it the daemon answers
+  # as soon as the command starts and a green job would prove nothing), so
+  # 200 = deployed, anything else = deploy failed.
   deploy:
     name: "Deploy: trigger qouver webhook"
     needs: [verify, security]
