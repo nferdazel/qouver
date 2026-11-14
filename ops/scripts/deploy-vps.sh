@@ -110,10 +110,19 @@ fi
 # Self-update deploy script safely using rename
 REPO_SCRIPT="$MONO_DIR/ops/scripts/deploy-vps.sh"
 SELF_SCRIPT="$APP_DIR/scripts/deploy-vps.sh"
+SCRIPT_SWAPPED=0
 if [ -f "$REPO_SCRIPT" ] && ! cmp -s "$REPO_SCRIPT" "$SELF_SCRIPT"; then
   TMP_SCRIPT="$SELF_SCRIPT.new.$$"
   cp -f "$REPO_SCRIPT" "$TMP_SCRIPT" && chmod +x "$TMP_SCRIPT" && mv -f "$TMP_SCRIPT" "$SELF_SCRIPT" \
-    && log "==> scripts/deploy-vps.sh updated from repo (applies on next deploy)"
+    && SCRIPT_SWAPPED=1 && log "==> scripts/deploy-vps.sh updated from repo"
+fi
+
+# A script replaced mid-run keeps running the old text, so a commit that moves
+# a build path fails once for no reason. Re-exec into the copy just swapped in;
+# the lock and its fd survive exec, and the second pass finds nothing to sync.
+if [ "$SCRIPT_SWAPPED" = "1" ]; then
+  log "==> Re-executing the updated deploy-vps.sh"
+  exec "$SELF_SCRIPT" "$@"
 fi
 
 # Sync helper scripts so the server copies do not drift from the repo.
