@@ -1,0 +1,12 @@
+# Build context is the repo root (podman build -f apps/api/Dockerfile .).
+# The image only needs qouver.nimble, shared/ and apps/api/, so everything
+# generated on the host stays out of the context.
+.git
+.github
+.build
+.local
+node_modules
+apps/web/dist
+logs
+tmp
+*.log

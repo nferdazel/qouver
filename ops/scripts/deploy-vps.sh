@@ -151,7 +151,7 @@ if podman image exists localhost/qouver-api:local; then
 fi
 podman build -t localhost/qouver-api:local \
   --build-arg GIT_REV="$REV" \
-  -f ops/container/qouver-api.Dockerfile .
+  -f apps/api/Dockerfile .
 
 # 7. Sync systemd quadlet container definition (mode 600, verified above)
 UNIT_DIR="$HOME/.config/containers/systemd"
