@@ -158,7 +158,7 @@ cd "$MONO_DIR"
 if podman image exists localhost/qouver-api:local; then
   podman tag localhost/qouver-api:local localhost/qouver-api:prev 2>/dev/null || true
 fi
-podman build -t localhost/qouver-api:local \
+/srv/qouver/bin/qouver-build-lock qouver -- podman build -t localhost/qouver-api:local \
   --build-arg GIT_REV="$REV" \
   -f apps/api/Dockerfile .
 
