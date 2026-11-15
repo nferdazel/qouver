@@ -152,15 +152,61 @@ mv "$WEB_NEW" "$APP_DIR/web"
 restorecon -RF "$APP_DIR/web/" 2>/dev/null || true
 log "==> Web assets swapped"
 
-# 6. Build Nim API container image with Podman
-log "==> Building Nim API container (Podman)..."
-cd "$MONO_DIR"
-if podman image exists localhost/qouver-api:local; then
-  podman tag localhost/qouver-api:local localhost/qouver-api:prev 2>/dev/null || true
+# 6. API image: pull the one CI built and signed, retag to :local / :prev.
+#    BUILD_MODE=host keeps the old compile path as the manual escape hatch for
+#    the day GitHub or the registry is down (DEPLOY-FLOW.md §1); never default.
+SHORT="$(printf '%s' "$REV" | cut -c1-7)"
+IMAGE_REF="ghcr.io/nferdazel/qouver-api:sha-${SHORT}"
+IMAGE_PULLED=0
+
+if [ "${BUILD_MODE:-registry}" = "host" ]; then
+  log "==> BUILD_MODE=host: building the Nim API container on the host..."
+  cd "$MONO_DIR"
+  if podman image exists localhost/qouver-api:local; then
+    podman tag localhost/qouver-api:local localhost/qouver-api:prev 2>/dev/null || true
+  fi
+  /srv/qouver/bin/qouver-build-lock qouver -- podman build -t localhost/qouver-api:local \
+    --build-arg GIT_REV="$REV" \
+    -f apps/api/Dockerfile .
+  IMAGE_PULLED=1
+else
+  log "==> Pulling API image $IMAGE_REF..."
+  PULL_OUT="$(mktemp)"
+  if podman pull "$IMAGE_REF" >"$PULL_OUT" 2>&1; then
+    # sha-<short> is a filename until the image proves which commit it is.
+    IMAGE_REV="$(podman inspect -f '{{ index .Labels "org.opencontainers.image.revision" }}' "$IMAGE_REF" 2>/dev/null || true)"
+    if [ "$IMAGE_REV" != "$REV" ]; then
+      rm -f "$PULL_OUT"
+      die "Image $IMAGE_REF says revision '${IMAGE_REV}', payload says $REV — running container untouched"
+    fi
+    cosign verify "$IMAGE_REF" \
+      --certificate-identity-regexp "^https://github.com/nferdazel/qouver/" \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null 2>&1 \
+      || { rm -f "$PULL_OUT"; die "cosign verify failed for $IMAGE_REF — running container untouched"; }
+    if podman image exists localhost/qouver-api:local; then
+      podman tag localhost/qouver-api:local localhost/qouver-api:prev 2>/dev/null || true
+    fi
+    podman tag "$IMAGE_REF" localhost/qouver-api:local
+    podman rmi "$IMAGE_REF" >/dev/null 2>&1 || true   # :local and :prev stay the only local tags
+    IMAGE_PULLED=1
+    log "==> Image pulled, verified and tagged :local (revision $IMAGE_REV)"
+  elif grep -qiE 'manifest unknown|manifest for .* not found|no such manifest' "$PULL_OUT"; then
+    # Legitimate: the path filter decided this commit does not change the API.
+    log "==> No API image for ${SHORT} (API side did not change); keeping the running container"
+  else
+    # A dead registry, an expired token or a 502 is NOT "not built". Fail closed.
+    TAIL_OUT="$(tail -3 "$PULL_OUT" 2>/dev/null || true)"
+    rm -f "$PULL_OUT"
+    die "Registry pull failed and this is NOT 'not built': $TAIL_OUT"
+  fi
+  rm -f "$PULL_OUT"
 fi
-/srv/qouver/bin/qouver-build-lock qouver -- podman build -t localhost/qouver-api:local \
-  --build-arg GIT_REV="$REV" \
-  -f apps/api/Dockerfile .
+
+# Web assets were swapped above; an API that did not change needs no restart.
+if [ "$IMAGE_PULLED" != "1" ]; then
+  log "==> Web assets only for ${SHORT}; API container left running, no restart"
+  exit 0
+fi
 
 # 7. Sync systemd quadlet container definition (mode 600, verified above)
 UNIT_DIR="$HOME/.config/containers/systemd"
