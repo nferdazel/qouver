@@ -113,11 +113,13 @@ jobs:
         with:
           version: 11
 
+      # No pnpm cache here: the job audits the lockfile without installing, so
+      # the store directory never exists and setup-node's post step failed the
+      # job trying to save it.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
 
       - name: "Supply chain: audit the frontend lockfile"
         run: pnpm audit --audit-level=high --prod

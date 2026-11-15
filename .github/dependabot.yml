@@ -6,6 +6,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # One PR for every action: eleven separate PRs meant eleven images and
+    # eleven deploy hooks for the same supply-chain bump.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
     commit-message:
       prefix: "chore"
     labels:
@@ -18,6 +24,15 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Patch and minor land together; a major stays its own PR so a breaking
+    # bump is never mixed into a batch that is safe to merge unread.
+    groups:
+      npm-patch-minor:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+          - minor
     commit-message:
       prefix: "chore"
     labels:
