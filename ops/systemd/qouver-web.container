@@ -1,0 +1,27 @@
+# Quadlet unit for qouver-web: podman + systemd user
+# Path on VPS: ~/.config/containers/systemd/qouver-web.container
+#
+# Not installed yet: today Caddy serves qouver.com from /srv/qouver/apps/qouver/web.
+# Flipping that block to reverse_proxy 127.0.0.1:8093 is the change that makes this
+# unit live, and the Caddy block goes back to `root *` to undo it.
+[Unit]
+Description=Qouver web (qouver.com static tree, nginx)
+After=network-online.target
+Wants=network-online.target
+[Container]
+Image=localhost/qouver-web:local
+ContainerName=qouver-web
+PublishPort=127.0.0.1:8093:8080
+Pull=never
+NoNewPrivileges=true
+DropCapability=ALL
+ReadOnly=true
+Tmpfs=/tmp
+Tmpfs=/var/cache/nginx
+Tmpfs=/var/run
+[Service]
+Restart=always
+RestartSec=3
+MemoryMax=128M
+[Install]
+WantedBy=default.target

@@ -27,6 +27,22 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+
+  # Golden CI/CD contract: the same rules the server repo checks, run here so
+  # drift fails this repo's own build instead of waiting for a manual audit.
+  # The script is a byte-identical copy of the server repo's
+  # ops/scripts/contract-check.sh; fix it there and copy it out again.
+  contract:
+    name: "Contract: golden CI/CD rules"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: "Contract: check this repo"
+        run: ./ops/scripts/contract-check.sh .
+
   verify:
     name: Verify & Test
     runs-on: ubuntu-24.04
@@ -89,17 +105,42 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Decides which image halves to build. This never filters the workflow itself:
-  # a filtered workflow creates no check-runs and a deploy gate waiting for them
-  # hangs forever. Three answers only: both, one, neither — and a path matching
+      # The audit reads pnpm-lock.yaml, so it needs the same toolchain the verify
+      # job uses and nothing else. High and above only: a transitive low-severity
+      # advisory in a dev tool must not block a release.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: "Supply chain: audit the frontend lockfile"
+        run: pnpm audit --audit-level=high --prod
+
+      # The filter decides which half is built and deployed, so it is tested with
+      # the same table the workflow's `changes` job duplicates.
+      - name: "Test: CI path filter table"
+        run: bash ops/scripts/path-filter-test.sh
+
+  # Decides which image halves to build (api = Nim, web = SvelteKit + nginx).
+  # This never filters the workflow itself: a filtered workflow creates no
+  # check-runs and a deploy gate waiting for them hangs forever. A half is built
+  # unless every changed path belongs to the other half — and a path matching
   # neither list means "build both", because the failure mode of a too-narrow
   # filter is serving last week's artifact while claiming success.
+  # ops/scripts/path-filter-test.sh holds the table of cases this logic must pass.
   changes:
     name: Changes
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
       api: ${{ steps.d.outputs.api }}
+      web: ${{ steps.d.outputs.web }}
       deploy: ${{ steps.d.outputs.deploy }}
     steps:
       - name: Checkout repository
@@ -126,17 +167,18 @@ jobs:
             [ "$FILES" = "__all__" ] && return 1
             ! printf '%s\n' "$FILES" | grep -qvE "$1"
           }
-          api=true; deploy=true
+          api=true; web=true; deploy=true
           # cannot reach a running artifact at all: no image, no deploy
           if only '^(docs/|\.github/|[^/]*\.md$)'; then
-            api=false; deploy=false
+            api=false; web=false; deploy=false
           # ops/ changes no image, but the host still has to pick the new script up
           elif only '^(docs/|\.github/|ops/|[^/]*\.md$)'; then
-            api=false
+            api=false; web=false
           else
-            only '^(apps/web/|packages/ui/|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$)' && api=false
+            only '^(apps/web/|packages/ui/|packages/api-client/|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$)' && api=false
+            only '^(apps/api/|shared/|modules/|qouver\.nimble$|config\.nims$)' && web=false
           fi
-          { echo "api=$api"; echo "deploy=$deploy"; } >> "$GITHUB_OUTPUT"
+          { echo "api=$api"; echo "web=$web"; echo "deploy=$deploy"; } >> "$GITHUB_OUTPUT"
 
   # Build always, push only on main. A Dockerfile that no longer compiles is a red
   # PR instead of a red production deploy at night.
@@ -207,12 +249,79 @@ jobs:
           DIGEST: ${{ steps.push.outputs.digest }}
         run: cosign sign --yes "ghcr.io/nferdazel/qouver-api@${DIGEST}"
 
+  # Same shape as image-api: builds on every PR, pushes only on main. The image is
+  # not consumed yet — the quadlet exists in ops/systemd, Caddy still serves the
+  # directory — so this job adds a red PR when the frontend stops containerising,
+  # not a deploy.
+  image-web:
+    name: "Image: web"
+    needs: [changes]
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+      id-token: write        # keyless cosign, this job only
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Short SHA
+        id: short
+        shell: bash
+        env:
+          SHA: ${{ github.sha }}
+        run: printf 'sha7=%.7s\n' "$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name == 'push' }}
+          # Baked into /healthz, which the deploy script reads back.
+          build-args: |
+            GIT_REV=${{ github.sha }}
+          tags: |
+            ghcr.io/nferdazel/qouver-web:sha-${{ steps.short.outputs.sha7 }}
+            ghcr.io/nferdazel/qouver-web:main
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Install cosign
+        if: github.event_name == 'push'
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      - name: Sign the digest
+        if: github.event_name == 'push'
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "ghcr.io/nferdazel/qouver-web@${DIGEST}"
+
   # The only name a deploy script or a branch protection rule reads, so the jobs
   # above can be rewritten without touching deployment.
   gate:
     name: Gate
     if: always()
-    needs: [verify, security, changes, image-api]
+    needs: [verify, security, changes, image-api, image-web]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -220,6 +329,7 @@ jobs:
       R_SECURITY: ${{ needs.security.result }}
       R_CHANGES: ${{ needs.changes.result }}
       R_API: ${{ needs.image-api.result }}
+      R_WEB: ${{ needs.image-web.result }}
     steps:
       - name: Require every job to be green
         shell: bash
@@ -228,8 +338,10 @@ jobs:
           for r in "$R_VERIFY" "$R_SECURITY" "$R_CHANGES"; do
             [ "$r" = "success" ] || { echo "required job: $r"; fail=1; }
           done
-          # the image job may be skipped by the filter; anything else is a failure
-          case "$R_API" in success|skipped) ;; *) echo "image job: $R_API"; fail=1 ;; esac
+          # an image job may be skipped by the filter; anything else is a failure
+          for r in "$R_API" "$R_WEB"; do
+            case "$r" in success|skipped) ;; *) echo "image job: $r"; fail=1 ;; esac
+          done
           exit "$fail"
 
   # The only deploy trigger. CI triggers a push to main once it is green, naming the
