@@ -411,10 +411,15 @@ install -m 600 "$UNIT_SRC" "$UNIT_DIR/qouver-api.container.new.$$" \
   && mv -f "$UNIT_DIR/qouver-api.container.new.$$" "$UNIT_DIR/qouver-api.container" \
   || die "Could not install $UNIT_SRC"
 
-# 8. Restart API container
+# 8. Restart API container. A container that exits before it reports ready
+# makes `systemctl restart` return non-zero immediately (Type=notify, the unit
+# goes straight to auto-restart), which under `set -e` used to abort the run
+# before the gate: no rollback, and the state file still naming the old
+# revision. A failed restart is therefore not fatal; the gate decides.
 log "==> Reloading systemd and restarting qouver-api..."
 systemctl --user daemon-reload
-systemctl --user restart qouver-api
+systemctl --user restart qouver-api \
+  || log "WARNING: restart returned non-zero; unit may be crash-looping, checking the health gate anyway..."
 
 # 9. Health check gate. A 200 alone is not proof: the container that answers
 # must report the revision this deploy built, otherwise a restart that silently
