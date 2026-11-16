@@ -7,22 +7,20 @@ import ./config
 import ./db
 import ./routes
 
+proc exitNow(code: cint) {.importc: "_exit", header: "<unistd.h>".}
+
 # Inside the container this binary is PID 1, which gets no default action for
 # SIGTERM, so without a handler `podman stop` waits out StopTimeout and SIGKILLs
-# us (unit reports status=137). close() stops accepting and lets in-flight
-# handlers finish, then serve() returns and the process exits 0.
-var shutdownTarget: Server
+# us (unit reports status=137). The handler must stay async-signal-safe: close()
+# takes locks and joins threads, so it cannot run here (that was the SIGSEGV in
+# bf4a4b1). _exit is a plain syscall, so the process leaves with status 0 and
+# the container stops at once.
+proc exitOnStopSignal(sig: cint) {.noconv.} =
+  exitNow(0)
 
-proc onShutdownSignal(sig: cint) {.noconv.} =
-  if not shutdownTarget.isNil:
-    shutdownTarget.close()
-
-proc installShutdownSignals*(server: Server) =
-  shutdownTarget = server
-  # No `discard`: posix.signal returns nothing on the Nim 2.2 line that CI and
-  # the image build use, so discarding its result is a type error there.
-  signal(SIGTERM, onShutdownSignal)
-  signal(SIGINT, onShutdownSignal)
+proc installShutdownSignals*() =
+  signal(SIGTERM, exitOnStopSignal)
+  signal(SIGINT, exitOnStopSignal)
 
 proc mummyPattern*(path: string): string =
   var segments: seq[string]
@@ -78,7 +76,7 @@ proc startServer*(cfg: Config) =
 
   let router = buildRouter(db)
   let server = newServer(router)
-  installShutdownSignals(server)
+  installShutdownSignals()
 
   echo "[QOUVER API] Server listening on http://", cfg.host, ":", cfg.port
   server.serve(Port(cfg.port), cfg.host)
