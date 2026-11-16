@@ -106,13 +106,16 @@ fi
 log "==> Trigger commit verified: $REV"
 
 # 4a-2. Nothing to deploy: a commit touching only docs, workflow files or root
-# markdown produces no image (the `changes` job reaches the same verdict), so
-# waiting the full window for one would hold the deploy lock for nothing.
-PREV_REV="$(cat "$STATE_FILE" 2>/dev/null || true)"
-if [ -n "$PREV_REV" ] && git cat-file -e "${PREV_REV}^{commit}" 2>/dev/null; then
-  CHANGED="$(git diff --name-only "$PREV_REV" "$REV" || true)"
-  if [ -n "$CHANGED" ] && ! printf '%s\n' "$CHANGED" | grep -qvE '^(docs/|\.github/|[^/]*\.md$)'; then
-    log "==> Only docs/workflow paths changed since $PREV_REV; no image to wait for, nothing to deploy"
+# markdown produces no image at all (the `changes` job reaches the same verdict
+# from `before..after`), so waiting the window for one would hold the deploy lock
+# for nothing. The previous main tip is HEAD^, the same commit GitHub sends as
+# `before` on a push, so this mirrors CI's filter instead of guessing from a
+# state file that can lag several commits behind.
+PREV_MAIN="$(git rev-parse "${REV}^" 2>/dev/null || true)"
+if [ -n "$PREV_MAIN" ] && [ "$PREV_MAIN" != "$REV" ]; then
+  CHANGED="$(git diff --name-only "$PREV_MAIN" "$REV" || true)"
+  if [ -n "$CHANGED" ] && ! printf '%s\n' "$CHANGED" | grep -qvE '^(docs/|\.github/|ops/|[^/]*\.md$)'; then
+    log "==> Only docs/workflow/ops paths changed in $REV; no image to wait for, nothing to deploy"
     exit 0
   fi
 fi
