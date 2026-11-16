@@ -329,10 +329,14 @@ if [ "$RC" = "0" ]; then
   WEB_PULLED=1
   log "==> Web image pulled, digest ${WEB_DIGEST##*@} verified (revision $WEB_REV)"
 elif [ "$RC" = "1" ]; then
-  # Still absent after the whole window: the gate went red or this commit
-  # changed no web path. Either way nothing runs, and the old tree keeps serving.
-  log "==> No web image for ${SHORT_WEB} after the wait window; keeping the current web assets"
+  # Absent after the whole window. On a push to main CI publishes both images
+  # whenever the gate is green, regardless of the path filter, and an ops-only
+  # commit never reaches this step — so a tag that is still missing here means
+  # the gate or the image job failed. Until 2026-11-16 this branch logged
+  # "keeping the current web assets" and carried on to exit 0: a red gate on
+  # main reported a successful deploy while production served the old revision.
   rm -f "$PULL_OUT"
+  die "No web image for ${SHORT_WEB} after the wait window: the gate or the image job did not publish it — deploy aborted, web assets untouched"
 else
   TAIL_OUT="$(tail -3 "$PULL_OUT" 2>/dev/null || true)"
   rm -f "$PULL_OUT"
@@ -399,10 +403,18 @@ else
     rm -f "$PULL_OUT"
     log "==> Image pulled, digest ${IMAGE_DIGEST##*@} verified and tagged :local (revision $IMAGE_REV)"
   elif [ "$RC" = "1" ]; then
-    # Absent for the whole window: the gate went red or this commit changed no
-    # API path. Either way the running container is untouched.
+    # Same fail-closed rule as the web pull above: on main a green gate always
+    # publishes both images, so a missing API tag means the gate or the API image
+    # job failed. The web tree may already have been swapped by this run, so put
+    # it back before aborting — never leave a new web on top of the old API.
     rm -f "$PULL_OUT"
-    log "==> No API image for ${SHORT} after the wait window; keeping the running container"
+    if [ "$WEB_PULLED" = "1" ] && [ -d "$APP_DIR/web.prev" ]; then
+      rm -rf "$APP_DIR/web"
+      mv "$APP_DIR/web.prev" "$APP_DIR/web"
+      restorecon -RF "$APP_DIR/web/" 2>/dev/null || true
+      log "==> Web assets restored from web.prev (this run had swapped them)"
+    fi
+    die "No API image for ${SHORT} after the wait window: the gate or the image job did not publish it — deploy aborted, running container untouched"
   else
     # A dead registry, an expired token or a 502 is NOT "not built". Fail closed.
     TAIL_OUT="$(tail -3 "$PULL_OUT" 2>/dev/null || true)"
@@ -411,11 +423,10 @@ else
   fi
 fi
 
-# Web assets were swapped above; an API that did not change needs no restart.
-if [ "$IMAGE_PULLED" != "1" ]; then
-  log "==> Web assets only for ${SHORT}; API container left running, no restart"
-  exit 0
-fi
+# Every path above either pulled a verified image or aborted, so reaching here
+# without one is a bug in this script, not a reason to report a quiet success.
+[ "$IMAGE_PULLED" = "1" ] \
+  || die "No verified API image for ${SHORT} reached the swap step — deploy aborted, running container untouched"
 
 # 7. Sync systemd quadlet container definition (mode 600, verified above)
 UNIT_DIR="$HOME/.config/containers/systemd"
