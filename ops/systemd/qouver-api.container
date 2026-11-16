@@ -1,6 +1,7 @@
 # Quadlet unit for qouver-api: podman + systemd user
 # Path on VPS: ~/.config/containers/systemd/qouver-api.container
 [Unit]
+OnFailure=alert@%N.service
 Description=Qouver API (qouver.com, Nim + PostgreSQL)
 After=network-online.target
 Wants=network-online.target
@@ -15,6 +16,16 @@ NoNewPrivileges=true
 DropCapability=ALL
 ReadOnly=true
 Tmpfs=/tmp
+# RT-06: the status line alone is not readiness. /healthz answers 200 while the body says
+# "database":"disconnected" (seen 2026-11-12 16:21, qouver-api lost the DNS race at boot and
+# fell back to memory data), so this check fails on that word. The image carries wget + grep,
+# no curl, no bash.
+HealthCmd=/bin/sh -c "wget -q -O- -T 5 http://127.0.0.1:8091/healthz | grep -qv disconnected"
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=45s
+PidsLimit=256
 [Service]
 Restart=always
 RestartSec=3
