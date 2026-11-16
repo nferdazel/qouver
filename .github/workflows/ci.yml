@@ -186,7 +186,7 @@ jobs:
   # PR instead of a red production deploy at night.
   image-api:
     name: "Image: api"
-    needs: [changes]
+    needs: [gate, changes]
     if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -257,7 +257,7 @@ jobs:
   # not a deploy.
   image-web:
     name: "Image: web"
-    needs: [changes]
+    needs: [gate, changes]
     if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -320,28 +320,29 @@ jobs:
 
   # The only name a deploy script or a branch protection rule reads, so the jobs
   # above can be rewritten without touching deployment.
+  #
+  # Gate covers the quality jobs only, never the image builds: a deploy may not
+  # start before every check is green, but the image has to be published after
+  # that verdict, so the two cannot wait for each other. `image-*` therefore
+  # `needs: [gate]`, and the host waits for the image instead of finding one that
+  # was built while the tests were still running.
   gate:
     name: Gate
     if: always()
-    needs: [verify, security, changes, image-api, image-web]
+    needs: [contract, verify, security, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
+      R_CONTRACT: ${{ needs.contract.result }}
       R_VERIFY: ${{ needs.verify.result }}
       R_SECURITY: ${{ needs.security.result }}
       R_CHANGES: ${{ needs.changes.result }}
-      R_API: ${{ needs.image-api.result }}
-      R_WEB: ${{ needs.image-web.result }}
     steps:
       - name: Require every job to be green
         shell: bash
         run: |
           fail=0
-          for r in "$R_VERIFY" "$R_SECURITY" "$R_CHANGES"; do
+          for r in "$R_CONTRACT" "$R_VERIFY" "$R_SECURITY" "$R_CHANGES"; do
             [ "$r" = "success" ] || { echo "required job: $r"; fail=1; }
-          done
-          # an image job may be skipped by the filter; anything else is a failure
-          for r in "$R_API" "$R_WEB"; do
-            case "$r" in success|skipped) ;; *) echo "image job: $r"; fail=1 ;; esac
           done
           exit "$fail"

@@ -28,6 +28,37 @@ mkdir -p "$APP_DIR/logs" "$BIN_DIR" "$APP_DIR/env" "$APP_DIR/scripts"
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG"; }
 die() { log "ERROR: $*"; exit 1; }
 
+# CI publishes an image only after every gate job is green, and the push reaches
+# this host before that. A tag that is not in the registry yet is therefore
+# waited for, not read as "this half did not change": the single attempt used to
+# keep the previous revision for good whenever the gate was slower than the
+# webhook. Anything other than a missing tag (auth, network, 5xx) fails at once.
+# 45 x 20s = 15 min covers gate + queue + build on a busy runner.
+IMAGE_WAIT_ATTEMPTS="${QOUVER_IMAGE_WAIT_ATTEMPTS:-45}"
+
+# 0 = pulled, 1 = still absent after the window, 2 = a real pull error
+pull_when_published() {
+  local ref="$1" out="$2" attempt=1
+  while :; do
+    if podman pull "$ref" >"$out" 2>&1; then return 0; fi
+    if ! grep -qiE 'manifest unknown|no such manifest|manifest for .* not found|name unknown' "$out"; then
+      return 2
+    fi
+    [ "$attempt" -lt "$IMAGE_WAIT_ATTEMPTS" ] || return 1
+    log "==> $ref not in the registry yet (gate or image job still running), attempt $attempt of $IMAGE_WAIT_ATTEMPTS"
+    attempt=$((attempt + 1))
+    sleep 20
+  done
+}
+
+# A tag is a file name until the bytes state their own digest. Resolve the digest
+# of what was just pulled, then verify and tag that digest, so a tag moved
+# between pull and verify cannot point the local tag at unverified bytes.
+pulled_digest() {
+  podman image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' "$1" 2>/dev/null \
+    | grep -F '@sha256:' | head -1
+}
+
 # 1. Ref guard (fail-closed)
 if [ "$REF" != "refs/heads/main" ]; then
   log "Ref $REF is not refs/heads/main — skipping deploy."
@@ -73,6 +104,18 @@ if [ "$REV" != "$TRIGGER_REV" ]; then
   die "Trigger commit $TRIGGER_REV does not match HEAD $REV — refusing to build"
 fi
 log "==> Trigger commit verified: $REV"
+
+# 4a-2. Nothing to deploy: a commit touching only docs, workflow files or root
+# markdown produces no image (the `changes` job reaches the same verdict), so
+# waiting the full window for one would hold the deploy lock for nothing.
+PREV_REV="$(cat "$STATE_FILE" 2>/dev/null || true)"
+if [ -n "$PREV_REV" ] && git cat-file -e "${PREV_REV}^{commit}" 2>/dev/null; then
+  CHANGED="$(git diff --name-only "$PREV_REV" "$REV" || true)"
+  if [ -n "$CHANGED" ] && ! printf '%s\n' "$CHANGED" | grep -qvE '^(docs/|\.github/|[^/]*\.md$)'; then
+    log "==> Only docs/workflow paths changed since $PREV_REV; no image to wait for, nothing to deploy"
+    exit 0
+  fi
+fi
 
 # 4b. Quadlet hardening gate (fail-closed). The VPS unit runs with
 # NoNewPrivileges, DropCapability=ALL and ReadOnly; never overwrite it with a
@@ -133,22 +176,27 @@ SHORT_WEB="$(printf '%s' "$REV" | cut -c1-7)"
 WEB_IMAGE="ghcr.io/nferdazel/qouver-web:sha-${SHORT_WEB}"
 WEB_PULLED=0
 PULL_OUT="$(mktemp)"
-if podman pull "$WEB_IMAGE" >"$PULL_OUT" 2>&1; then
+RC=0
+pull_when_published "$WEB_IMAGE" "$PULL_OUT" || RC=$?
+if [ "$RC" = "0" ]; then
   rm -f "$PULL_OUT"
+  WEB_DIGEST="$(pulled_digest "$WEB_IMAGE")"
+  [ -n "$WEB_DIGEST" ] || die "Pulled $WEB_IMAGE but it reports no digest — web assets untouched"
   # sha-<7> is a filename until the image proves which commit it is.
-  WEB_REV="$(podman inspect -f '{{ index .Labels "org.opencontainers.image.revision" }}' "$WEB_IMAGE" 2>/dev/null || true)"
+  WEB_REV="$(podman inspect -f '{{ index .Labels "org.opencontainers.image.revision" }}' "$WEB_DIGEST" 2>/dev/null || true)"
   if [ "$WEB_REV" != "$REV" ]; then
     die "Web image $WEB_IMAGE says revision '${WEB_REV}', payload says $REV — web assets untouched"
   fi
-  cosign verify "$WEB_IMAGE" \
+  cosign verify "$WEB_DIGEST" \
     --certificate-identity-regexp "^https://github.com/nferdazel/qouver/" \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null 2>&1 \
-    || die "cosign verify failed for $WEB_IMAGE — web assets untouched"
+    || die "cosign verify failed for $WEB_DIGEST — web assets untouched"
   WEB_PULLED=1
-  log "==> Web image pulled and verified (revision $WEB_REV)"
-elif grep -qiE 'manifest unknown|manifest for .* not found|no such manifest' "$PULL_OUT"; then
-  # The web image job may still be running; the previous tree keeps serving.
-  log "==> No web image for ${SHORT_WEB} yet; keeping the current web assets"
+  log "==> Web image pulled, digest ${WEB_DIGEST##*@} verified (revision $WEB_REV)"
+elif [ "$RC" = "1" ]; then
+  # Still absent after the whole window: the gate went red or this commit
+  # changed no web path. Either way nothing runs, and the old tree keeps serving.
+  log "==> No web image for ${SHORT_WEB} after the wait window; keeping the current web assets"
   rm -f "$PULL_OUT"
 else
   TAIL_OUT="$(tail -3 "$PULL_OUT" 2>/dev/null || true)"
@@ -159,18 +207,19 @@ fi
 if [ "$WEB_PULLED" = "1" ]; then
   WEB_CTR="qouver-web-extract.$$"
   podman rm -f "$WEB_CTR" >/dev/null 2>&1 || true
-  podman create --name "$WEB_CTR" "$WEB_IMAGE" >/dev/null
+  # Created from the digest that was verified above, not from the mutable tag.
+  podman create --name "$WEB_CTR" "$WEB_DIGEST" >/dev/null
   WEB_NEW="$APP_DIR/web.new"
   rm -rf "$WEB_NEW"
   mkdir -p "$WEB_NEW"
   podman cp "$WEB_CTR:/usr/share/nginx/html/." "$WEB_NEW/"
   podman rm -f "$WEB_CTR" >/dev/null
-  podman rmi "$WEB_IMAGE" >/dev/null 2>&1 || true
+  podman rmi "$WEB_DIGEST" >/dev/null 2>&1 || true
   rm -rf "$APP_DIR/web.prev"
   if [ -d "$APP_DIR/web" ]; then mv "$APP_DIR/web" "$APP_DIR/web.prev"; fi
   mv "$WEB_NEW" "$APP_DIR/web"
   restorecon -RF "$APP_DIR/web/" 2>/dev/null || true
-  log "==> Web assets swapped from $WEB_IMAGE"
+  log "==> Web assets swapped from $WEB_DIGEST"
 fi
 
 # 6. API image: pull the one CI built and signed, retag to :local / :prev.
@@ -193,34 +242,40 @@ if [ "${BUILD_MODE:-registry}" = "host" ]; then
 else
   log "==> Pulling API image $IMAGE_REF..."
   PULL_OUT="$(mktemp)"
-  if podman pull "$IMAGE_REF" >"$PULL_OUT" 2>&1; then
+  RC=0
+  pull_when_published "$IMAGE_REF" "$PULL_OUT" || RC=$?
+  if [ "$RC" = "0" ]; then
+    IMAGE_DIGEST="$(pulled_digest "$IMAGE_REF")"
+    [ -n "$IMAGE_DIGEST" ] || { rm -f "$PULL_OUT"; die "Pulled $IMAGE_REF but it reports no digest — running container untouched"; }
     # sha-<short> is a filename until the image proves which commit it is.
-    IMAGE_REV="$(podman inspect -f '{{ index .Labels "org.opencontainers.image.revision" }}' "$IMAGE_REF" 2>/dev/null || true)"
+    IMAGE_REV="$(podman inspect -f '{{ index .Labels "org.opencontainers.image.revision" }}' "$IMAGE_DIGEST" 2>/dev/null || true)"
     if [ "$IMAGE_REV" != "$REV" ]; then
       rm -f "$PULL_OUT"
       die "Image $IMAGE_REF says revision '${IMAGE_REV}', payload says $REV — running container untouched"
     fi
-    cosign verify "$IMAGE_REF" \
+    cosign verify "$IMAGE_DIGEST" \
       --certificate-identity-regexp "^https://github.com/nferdazel/qouver/" \
       --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null 2>&1 \
-      || { rm -f "$PULL_OUT"; die "cosign verify failed for $IMAGE_REF — running container untouched"; }
+      || { rm -f "$PULL_OUT"; die "cosign verify failed for $IMAGE_DIGEST — running container untouched"; }
     if podman image exists localhost/qouver-api:local; then
       podman tag localhost/qouver-api:local localhost/qouver-api:prev 2>/dev/null || true
     fi
-    podman tag "$IMAGE_REF" localhost/qouver-api:local
+    podman tag "$IMAGE_DIGEST" localhost/qouver-api:local
     podman rmi "$IMAGE_REF" >/dev/null 2>&1 || true   # :local and :prev stay the only local tags
     IMAGE_PULLED=1
-    log "==> Image pulled, verified and tagged :local (revision $IMAGE_REV)"
-  elif grep -qiE 'manifest unknown|manifest for .* not found|no such manifest' "$PULL_OUT"; then
-    # Legitimate: the path filter decided this commit does not change the API.
-    log "==> No API image for ${SHORT} (API side did not change); keeping the running container"
+    rm -f "$PULL_OUT"
+    log "==> Image pulled, digest ${IMAGE_DIGEST##*@} verified and tagged :local (revision $IMAGE_REV)"
+  elif [ "$RC" = "1" ]; then
+    # Absent for the whole window: the gate went red or this commit changed no
+    # API path. Either way the running container is untouched.
+    rm -f "$PULL_OUT"
+    log "==> No API image for ${SHORT} after the wait window; keeping the running container"
   else
     # A dead registry, an expired token or a 502 is NOT "not built". Fail closed.
     TAIL_OUT="$(tail -3 "$PULL_OUT" 2>/dev/null || true)"
     rm -f "$PULL_OUT"
     die "Registry pull failed and this is NOT 'not built': $TAIL_OUT"
   fi
-  rm -f "$PULL_OUT"
 fi
 
 # Web assets were swapped above; an API that did not change needs no restart.
@@ -294,6 +349,7 @@ fi
 # 9b. Drop dangling images; :local and :prev stay (the retention contract)
 podman image prune -f >/dev/null 2>&1 || true
 
-# 10. Record deployed revision
+# 10. Record deployed revision (and the digest it resolved to, when pulled)
 printf '%s\n' "$REV" > "$STATE_FILE"
+[ -n "${IMAGE_DIGEST:-}" ] && printf '%s %s\n' "$REV" "${IMAGE_DIGEST##*@}" > "$APP_DIR/.deployed_image"
 log "==> Deployment completed successfully for $REPO ($REV)"
