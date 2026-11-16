@@ -47,18 +47,10 @@ flock -w 1200 200 || die "Another deploy is still running after 1200s ($LOCK_FIL
 
 log "==> Deploy triggered for $REPO ($REF)"
 
-# 3. Setup environment PATH (fnm / node / corepack / pnpm)
+# 3. Setup environment PATH (fnm / node) — kept for the BUILD_MODE=host escape hatch.
 if [ -d "$HOME/.local/share/fnm" ]; then
   export PATH="$HOME/.local/share/fnm/current/bin:$HOME/.local/share/fnm/aliases/default/bin:$HOME/.local/share/pnpm/bin:$HOME/.local/bin:$PATH"
   eval "$(fnm env 2>/dev/null)" || true
-fi
-
-if command -v pnpm >/dev/null 2>&1; then
-  PNPM_CMD="pnpm"
-elif command -v corepack >/dev/null 2>&1; then
-  PNPM_CMD="corepack pnpm"
-else
-  die "pnpm or corepack not found in PATH: $PATH"
 fi
 
 # 4. Fetch latest commit
@@ -135,22 +127,52 @@ for helper in smoke.sh rollback.sh; do
   fi
 done
 
-# 5. Build static web (SvelteKit)
-log "==> Building web assets with $PNPM_CMD..."
-cd "$MONO_DIR"
-$PNPM_CMD install --frozen-lockfile
-$PNPM_CMD --filter @qouver/api-client gen
-$PNPM_CMD --filter @qouver/web build
+# 5. Static web: pull the image CI built and signed, then extract its tree.
+#    The host never runs `pnpm build` any more — every build happens on GitHub.
+log "==> Web: pulling the signed web image..."
+SHORT_WEB="$(printf '%s' "$REV" | cut -c1-7)"
+WEB_IMAGE="ghcr.io/nferdazel/qouver-web:sha-${SHORT_WEB}"
+WEB_PULLED=0
+PULL_OUT="$(mktemp)"
+if podman pull "$WEB_IMAGE" >"$PULL_OUT" 2>&1; then
+  rm -f "$PULL_OUT"
+  # sha-<7> is a filename until the image proves which commit it is.
+  WEB_REV="$(podman inspect -f '{{ index .Labels "org.opencontainers.image.revision" }}' "$WEB_IMAGE" 2>/dev/null || true)"
+  if [ "$WEB_REV" != "$REV" ]; then
+    die "Web image $WEB_IMAGE says revision '${WEB_REV}', payload says $REV — web assets untouched"
+  fi
+  cosign verify "$WEB_IMAGE" \
+    --certificate-identity-regexp "^https://github.com/nferdazel/qouver/" \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null 2>&1 \
+    || die "cosign verify failed for $WEB_IMAGE — web assets untouched"
+  WEB_PULLED=1
+  log "==> Web image pulled and verified (revision $WEB_REV)"
+elif grep -qiE 'manifest unknown|manifest for .* not found|no such manifest' "$PULL_OUT"; then
+  # The web image job may still be running; the previous tree keeps serving.
+  log "==> No web image for ${SHORT_WEB} yet; keeping the current web assets"
+  rm -f "$PULL_OUT"
+else
+  TAIL_OUT="$(tail -3 "$PULL_OUT" 2>/dev/null || true)"
+  rm -f "$PULL_OUT"
+  die "Web image pull failed and this is NOT 'not built': $TAIL_OUT"
+fi
 
-# Swap web assets safely
-WEB_NEW="$APP_DIR/web.new"
-rm -rf "$WEB_NEW"
-cp -a "$MONO_DIR/apps/web/build" "$WEB_NEW"
-rm -rf "$APP_DIR/web.prev"
-[ -d "$APP_DIR/web" ] && mv "$APP_DIR/web" "$APP_DIR/web.prev"
-mv "$WEB_NEW" "$APP_DIR/web"
-restorecon -RF "$APP_DIR/web/" 2>/dev/null || true
-log "==> Web assets swapped"
+if [ "$WEB_PULLED" = "1" ]; then
+  WEB_CTR="qouver-web-extract.$$"
+  podman rm -f "$WEB_CTR" >/dev/null 2>&1 || true
+  podman create --name "$WEB_CTR" "$WEB_IMAGE" >/dev/null
+  WEB_NEW="$APP_DIR/web.new"
+  rm -rf "$WEB_NEW"
+  mkdir -p "$WEB_NEW"
+  podman cp "$WEB_CTR:/usr/share/nginx/html/." "$WEB_NEW/"
+  podman rm -f "$WEB_CTR" >/dev/null
+  podman rmi "$WEB_IMAGE" >/dev/null 2>&1 || true
+  rm -rf "$APP_DIR/web.prev"
+  if [ -d "$APP_DIR/web" ]; then mv "$APP_DIR/web" "$APP_DIR/web.prev"; fi
+  mv "$WEB_NEW" "$APP_DIR/web"
+  restorecon -RF "$APP_DIR/web/" 2>/dev/null || true
+  log "==> Web assets swapped from $WEB_IMAGE"
+fi
 
 # 6. API image: pull the one CI built and signed, retag to :local / :prev.
 #    BUILD_MODE=host keeps the old compile path as the manual escape hatch for
