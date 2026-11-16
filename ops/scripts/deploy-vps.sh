@@ -444,7 +444,10 @@ else
   log "ERROR: Health gate failed ($HEALTH_URL did not serve revision $REV, last seen: ${LIVE_REV:-no answer}). Rolling back to ${PREV_REV:-previous image}..."
   if podman image exists localhost/qouver-api:prev; then
     podman tag localhost/qouver-api:prev localhost/qouver-api:local
-    systemctl --user restart qouver-api || true
+    # Rule 8 applies to the restore restart too: a non-zero exit is a warning,
+    # never a reason to skip the verification below and the web restore after it.
+    systemctl --user restart qouver-api \
+      || log "WARNING: ROLLBACK restart returned non-zero; unit may be crash-looping, verifying the rollback anyway..."
     ROLLED_REV=""
     for i in $(seq 1 15); do
       ROLLED_REV=$(curl -s -f --max-time 3 "$HEALTH_URL" 2>/dev/null \
