@@ -11,6 +11,11 @@ RUN nimble install -y -d
 # commit yields a distinct image ID (a usable :prev for rollback). CI also puts
 # this SHA in org.opencontainers.image.revision, so a published image can be
 # matched to the ref the host deployed without starting the container.
+#
+# An image that exits before it reports READY makes `systemctl restart` return
+# non-zero at once; the host deploy logs that as a warning and lets the health
+# gate decide (QOUVER_CICD_STANDARD v1.1 rule 8), so this label is what the gate
+# compares against after a restart it did not trust.
 ARG GIT_REV=dev
 
 COPY shared/ ./shared/
