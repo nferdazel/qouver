@@ -8,6 +8,8 @@
 #   $2 = ref
 #   $3 = commit sha GitHub pushed (payload.after)
 #
+# This script copies itself mid-run and re-execs the copy just swapped in, so a
+# fix merged to it applies in the same deploy, not one deploy later.
 set -euo pipefail
 
 REPO="${1:-qouver}"
@@ -54,9 +56,66 @@ pull_when_published() {
 # A tag is a file name until the bytes state their own digest. Resolve the digest
 # of what was just pulled, then verify and tag that digest, so a tag moved
 # between pull and verify cannot point the local tag at unverified bytes.
+#
+# One tag carries TWO digests: the multi-arch image index that CI signed, and the
+# per-arch manifest podman resolved to. Their order in RepoDigests is not stable,
+# so `head -1` was a coin flip — on 2026-11-16 in fond it picked the per-arch digest,
+# cosign rejected it and the deploy aborted with the web left on the old image. The
+# manifest list in the registry says which digests are its children (mediaType
+# decides, not position); the index is the one left over. No index means an empty
+# result and a loud failure in the caller — never a per-arch digest presented as
+# the signed one.
+INDEX_MEDIA_TYPES="application/vnd.oci.image.index.v1+json application/vnd.docker.distribution.manifest.list.v2+json"
 pulled_digest() {
-  podman image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' "$1" 2>/dev/null \
-    | grep -F '@sha256:' | head -1
+  local ref="$1" list media children cand index=""
+  list="$(podman manifest inspect "$ref" 2>/dev/null || true)"
+  media="$(printf '%s' "$list" | sed -n 's/.*"mediaType" *: *"\([^"]*\)".*/\1/p' | head -1)"
+  case " $INDEX_MEDIA_TYPES " in
+    *" ${media:-none} "*) ;;
+    *) return 0 ;;
+  esac
+  # Index manifests hold no layer/config digests, only their children's.
+  # The same digest is recorded under two repository names once the image has
+  # also been tagged :local (ghcr.io/... and localhost/...). Count distinct
+  # digests, or a re-deploy of the same commit looks like two non-children and
+  # returns empty — measured on qouver1, 2026-11-16.
+  children=" $(printf '%s' "$list" | sed -n 's/.*"digest" *: *"\(sha256:[0-9a-f]*\)".*/\1/p' | tr '\n' ' ') "
+  while read -r cand; do
+    [ -n "$cand" ] || continue
+    case "$children" in *" ${cand##*@} "*) continue ;; esac
+    # Two non-children is an unknown shape: return empty rather than guess.
+    [ -z "$index" ] || return 0
+    index="$cand"
+  done <<EOF
+$(podman image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' "$ref" 2>/dev/null \
+    | grep -F '@sha256:' | sort | awk -F'@' '!seen[$2]++' || true)
+EOF
+  printf '%s' "$index"
+}
+
+# CI signs the image right after pushing it, so the signature artifact is not
+# readable for a few seconds: on 2026-11-16 a verify ~5s after the pull failed
+# while the same digest passed seconds later. Bounded retry, then the same
+# fail-closed abort as before — an unverified digest is never tagged, and a
+# registry that never answers is not a pass.
+COSIGN_ATTEMPTS="${COSIGN_ATTEMPTS:-5}"     # 5 x 3s = 15s of tolerance
+COSIGN_RETRY_DELAY="${COSIGN_RETRY_DELAY:-3}"
+verify_signature() {
+  local digest="$1" attempt=1
+  while :; do
+    if cosign verify "$digest" \
+      --certificate-identity-regexp "^https://github.com/nferdazel/qouver/" \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null 2>&1; then
+      if [ "$attempt" -gt 1 ]; then
+        log "==> cosign verify passed on attempt $attempt for ${digest##*@}"
+      fi
+      return 0
+    fi
+    [ "$attempt" -lt "$COSIGN_ATTEMPTS" ] || return 1
+    log "==> cosign verify did not pass for ${digest##*@} (attempt $attempt of $COSIGN_ATTEMPTS), retrying in ${COSIGN_RETRY_DELAY}s"
+    attempt=$((attempt + 1))
+    sleep "$COSIGN_RETRY_DELAY"
+  done
 }
 
 # 1. Ref guard (fail-closed)
@@ -190,9 +249,7 @@ if [ "$RC" = "0" ]; then
   if [ "$WEB_REV" != "$REV" ]; then
     die "Web image $WEB_IMAGE says revision '${WEB_REV}', payload says $REV — web assets untouched"
   fi
-  cosign verify "$WEB_DIGEST" \
-    --certificate-identity-regexp "^https://github.com/nferdazel/qouver/" \
-    --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null 2>&1 \
+  verify_signature "$WEB_DIGEST" \
     || die "cosign verify failed for $WEB_DIGEST — web assets untouched"
   WEB_PULLED=1
   log "==> Web image pulled, digest ${WEB_DIGEST##*@} verified (revision $WEB_REV)"
@@ -256,9 +313,7 @@ else
       rm -f "$PULL_OUT"
       die "Image $IMAGE_REF says revision '${IMAGE_REV}', payload says $REV — running container untouched"
     fi
-    cosign verify "$IMAGE_DIGEST" \
-      --certificate-identity-regexp "^https://github.com/nferdazel/qouver/" \
-      --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null 2>&1 \
+    verify_signature "$IMAGE_DIGEST" \
       || { rm -f "$PULL_OUT"; die "cosign verify failed for $IMAGE_DIGEST — running container untouched"; }
     if podman image exists localhost/qouver-api:local; then
       podman tag localhost/qouver-api:local localhost/qouver-api:prev 2>/dev/null || true
