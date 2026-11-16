@@ -191,7 +191,12 @@ jobs:
     # api and web of the same sha, so a skipped image would strand that deploy for
     # 15 minutes and then leave the previous revision serving. PRs keep the path
     # filter to save minutes.
-    if: github.event_name == 'push' || needs.changes.outputs.api == 'true'
+    #
+    # `always()` leads the condition on purpose: a plain `if` on a job with
+    # `needs` is also skipped when any needed job is skipped, which is how
+    # cc11132 published api and stranded the host waiting for web. The gate
+    # result is still required, so a red gate never publishes.
+    if: always() && needs.gate.result == 'success' && (github.event_name == 'push' || needs.changes.outputs.api == 'true')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -262,7 +267,9 @@ jobs:
   image-web:
     name: "Image: web"
     needs: [gate, changes]
-    if: github.event_name == 'push' || needs.changes.outputs.web == 'true'
+    # Same `always()` reason as image-api: the host waits for both tags of one
+    # sha, so a skip here strands the deploy.
+    if: always() && needs.gate.result == 'success' && (github.event_name == 'push' || needs.changes.outputs.web == 'true')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
