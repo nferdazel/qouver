@@ -5,10 +5,10 @@
 # - `image-api` builds every PR, pushes ghcr.io/nferdazel/qouver-api:sha-<7> + :main on main,
 #   keyless-signs the digest, labels the revision the host compares against the payload
 # - `gate` is the single name a deploy script or branch protection ever reads
-# - `deploy` hangs off `gate` instead of the two build jobs, and also honours the filter
+# - deploy is not a job: the repository push webhook calls /hooks/qouver, the same
+#   trigger the other apps use. CI green and deploy are separate signals here.
 #
-# The published image is not consumed yet: deploy-vps.sh still builds on the VPS.
-# Switching the host to `podman pull <digest>` is a separate change owned by Dimas.
+# The host pulls the signed image and rotates :local / :prev; it never builds.
 name: CI
 
 on:
@@ -345,71 +345,3 @@ jobs:
             case "$r" in success|skipped) ;; *) echo "image job: $r"; fail=1 ;; esac
           done
           exit "$fail"
-
-  # The only deploy trigger. CI triggers a push to main once it is green, naming the
-  # commit it verified; the VPS script deploys that commit and nothing else, so the
-  # host never asks GitHub anything and needs no GitHub credential or rate limit.
-  # The hook returns its answer only when the deploy script exits, so 200 means
-  # deployed; anything else is reconciled against the public /healthz revision.
-  deploy:
-    name: "Deploy: trigger qouver webhook"
-    needs: [gate, changes]
-    if: >-
-      always()
-      && github.event_name == 'push' && github.ref == 'refs/heads/main'
-      && needs.gate.result == 'success'
-      && needs.changes.outputs.deploy == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - name: Sign and POST the deploy trigger
-        env:
-          HOOK_URL: https://api.qouver.com/hooks/qouver
-          HOOK_SECRET: ${{ secrets.QOUVER_HOOK_SECRET }}
-          PUBLIC_HEALTH_URL: https://qouver.com/healthz
-          COMMIT_SHA: ${{ github.sha }}
-          REPO_NAME: ${{ github.event.repository.name }}
-          REF_NAME: ${{ github.ref }}
-        run: |
-          if [ -z "$HOOK_SECRET" ]; then
-            echo "::error::QOUVER_HOOK_SECRET is not set for this repository; refusing to deploy"
-            exit 1
-          fi
-          printf '{"ref":"%s","after":"%s","repository":{"name":"%s"}}' \
-            "$REF_NAME" "$COMMIT_SHA" "$REPO_NAME" > trigger.json
-          rm -f answer.txt
-          SIGNATURE="sha256=$(openssl dgst -sha256 -hmac "$HOOK_SECRET" -binary trigger.json \
-            | od -An -tx1 | tr -d ' \n')"
-          # 720s fits inside the 15-minute job timeout with room for the check
-          # below, and is six times the longest deploy seen so far (~2 min).
-          if ! CODE=$(curl -sS --max-time 720 -o answer.txt -w '%{http_code}' \
-            -X POST \
-            -H 'Content-Type: application/json' \
-            -H "X-Hub-Signature-256: $SIGNATURE" \
-            -H 'X-GitHub-Event: push' \
-            --data-binary @trigger.json "$HOOK_URL"); then
-            CODE="000"
-          fi
-          echo "deploy hook answered HTTP $CODE for $COMMIT_SHA"
-          if [ "$CODE" != "200" ]; then
-            # A build slower than the call is not a failed deploy: the hook only
-            # answers when the script exits, so ask the site which revision it
-            # serves before calling this red. Green here still means the commit
-            # is live, never that a trigger was merely accepted.
-            echo "Hook did not answer 200; reconciling against $PUBLIC_HEALTH_URL"
-            LIVE_REV=""
-            for i in $(seq 1 18); do
-              LIVE_REV=$(curl -sf --max-time 10 "$PUBLIC_HEALTH_URL" \
-                | sed -n 's/.*"revision"[[:space:]]*:[[:space:]]*"\([0-9a-f]\{40\}\)".*/\1/p' || true)
-              [ "$LIVE_REV" = "$COMMIT_SHA" ] && break
-              sleep 5
-            done
-            if [ "$LIVE_REV" = "$COMMIT_SHA" ]; then
-              echo "Deploy confirmed by $PUBLIC_HEALTH_URL: revision $COMMIT_SHA is live"
-              cat answer.txt 2>/dev/null || true
-              exit 0
-            fi
-            echo "::error::Deploy not confirmed (hook HTTP $CODE, $PUBLIC_HEALTH_URL serves '${LIVE_REV:-nothing}'); a deploy may still be running on the VPS, check deploy.log"
-            cat answer.txt 2>/dev/null || true
-            exit 1
-          fi

@@ -2,11 +2,11 @@
 #
 # deploy-vps.sh — automated deploy script for Qouver (spec: uniform with cbs & fond)
 #
-# Triggered by the CI deploy job (.github/workflows/ci.yml) through the webhook
-# daemon, for a commit whose CI run is already green:
+# Triggered by the repository push webhook through the webhook daemon (same
+# trigger as the other apps), for the commit GitHub just pushed:
 #   $1 = repository.name
 #   $2 = ref
-#   $3 = commit sha the green CI run belongs to (payload.after)
+#   $3 = commit sha GitHub pushed (payload.after)
 #
 set -euo pipefail
 
@@ -34,9 +34,9 @@ if [ "$REF" != "refs/heads/main" ]; then
   exit 0
 fi
 
-# 1b. Trigger commit (fail-closed). The only caller is the CI deploy job, which
-# names the commit its run went green for. A trigger without a commit cannot be
-# verified against HEAD, so it does not build. No override, no fallback.
+# 1b. Trigger commit (fail-closed). The webhook names the pushed commit in
+# payload.after. A trigger without a commit cannot be verified against HEAD, so
+# it does not build. No override, no fallback.
 if [ -z "$TRIGGER_REV" ]; then
   die "No trigger commit (arg 3) — refusing to build without a commit to verify"
 fi
@@ -66,10 +66,9 @@ git reset --hard origin/main
 REV=$(git rev-parse HEAD)
 log "==> Building commit: $REV"
 
-# 4a. Trigger gate (fail-closed, no API call). CI is the only thing that says a
-# commit is green, and it says so to this script by naming the sha in the
-# trigger. If HEAD moved past the triggered commit, the deploy would build code
-# nobody verified, so it stops before any swap or build.
+# 4a. Trigger gate (fail-closed, no API call). The webhook names the commit it is
+# deploying; the script deploys exactly that commit. If HEAD moved past it, the
+# deploy would ship code nobody triggered, so it stops before any swap or build.
 if [ "$REV" != "$TRIGGER_REV" ]; then
   die "Trigger commit $TRIGGER_REV does not match HEAD $REV — refusing to build"
 fi
