@@ -95,26 +95,39 @@ EOF
 
 # CI signs the image right after pushing it, so the signature artifact is not
 # readable for a few seconds: on 2026-11-16 a verify ~5s after the pull failed
-# while the same digest passed seconds later. Bounded retry, then the same
-# fail-closed abort as before — an unverified digest is never tagged, and a
-# registry that never answers is not a pass.
-COSIGN_ATTEMPTS="${COSIGN_ATTEMPTS:-5}"     # 5 x 3s = 15s of tolerance
-COSIGN_RETRY_DELAY="${COSIGN_RETRY_DELAY:-3}"
+# while the same digest passed seconds later. The retry window is bounded in
+# time, not in attempts, and the gap grows between tries, so a signing step that
+# lands late is still caught: on 2026-11-16 16:46 a 15s window was not enough
+# and the deploy needed a hand rerun. Past the window the same fail-closed abort
+# as before — an unverified digest is never tagged, and a registry that never
+# answers is not a pass.
+COSIGN_WINDOW="${COSIGN_WINDOW:-90}"        # total seconds of tolerance
+COSIGN_RETRY_DELAY="${COSIGN_RETRY_DELAY:-3}"   # first gap, doubles per attempt
+COSIGN_RETRY_MAX="${COSIGN_RETRY_MAX:-10}"      # gap ceiling
 verify_signature() {
-  local digest="$1" attempt=1
+  local digest="$1" attempt=1 delay="$COSIGN_RETRY_DELAY" start remain err
+  start="$(date +%s)"
   while :; do
-    if cosign verify "$digest" \
+    # stderr only: that is where cosign puts the reason it rejected the digest.
+    if err="$(cosign verify "$digest" \
       --certificate-identity-regexp "^https://github.com/nferdazel/qouver/" \
-      --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null 2>&1; then
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com 2>&1 >/dev/null)"; then
       if [ "$attempt" -gt 1 ]; then
-        log "==> cosign verify passed on attempt $attempt for ${digest##*@}"
+        log "==> cosign verify passed on attempt $attempt for ${digest##*@} ($(( $(date +%s) - start ))s into the window)"
       fi
       return 0
     fi
-    [ "$attempt" -lt "$COSIGN_ATTEMPTS" ] || return 1
-    log "==> cosign verify did not pass for ${digest##*@} (attempt $attempt of $COSIGN_ATTEMPTS), retrying in ${COSIGN_RETRY_DELAY}s"
+    remain=$(( COSIGN_WINDOW - ( $(date +%s) - start ) ))
+    if [ "$remain" -le 0 ]; then
+      log "ERROR: cosign verify failed for revision ${REV:-unknown} after ${COSIGN_WINDOW}s (${attempt} attempts, digest ${digest##*@}), last cosign error: $(printf '%s\n' "$err" | grep -v '^[[:space:]]*$' | tail -n 1)"
+      return 1
+    fi
+    [ "$delay" -le "$remain" ] || delay="$remain"
+    log "==> cosign verify did not pass for ${digest##*@} (attempt $attempt, ${remain}s of window left), retrying in ${delay}s"
     attempt=$((attempt + 1))
-    sleep "$COSIGN_RETRY_DELAY"
+    sleep "$delay"
+    delay=$(( delay * 2 ))
+    [ "$delay" -le "$COSIGN_RETRY_MAX" ] || delay="$COSIGN_RETRY_MAX"
   done
 }
 
