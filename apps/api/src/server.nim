@@ -1,6 +1,6 @@
 ## Mummy HTTP Server Builder
 
-import std/[posix, strutils]
+import std/[posix, strutils, atomics]
 import mummy
 import mummy/routers
 import ./config
@@ -9,18 +9,52 @@ import ./routes
 
 proc exitNow(code: cint) {.importc: "_exit", header: "<unistd.h>".}
 
+# Stop signals.
+#
 # Inside the container this binary is PID 1, which gets no default action for
 # SIGTERM, so without a handler `podman stop` waits out StopTimeout and SIGKILLs
-# us (unit reports status=137). The handler must stay async-signal-safe: close()
-# takes locks and joins threads, so it cannot run here (that was the SIGSEGV in
-# bf4a4b1). _exit is a plain syscall, so the process leaves with status 0 and
-# the container stops at once.
-proc exitOnStopSignal(sig: cint) {.noconv.} =
+# us (unit reports status=137).
+#
+# Signal context stays async-signal-safe: one atomic load, one atomic exchange
+# and a plain `_exit` syscall. bf4a4b1 crashed with SIGSEGV because it called
+# mummy's Server.close() here, and close() takes the selector lock.
+#
+# A request that is already being served is allowed to finish before the process
+# leaves. `alarm` arms a hard cap at signal time, so a stuck client cannot push
+# the stop past podman's 10s StopTimeout.
+const StopDrainCapSeconds = 5
+const ResponseFlushGraceUs = 50_000
+
+var stopRequested: Atomic[bool]
+var inFlightRequests: Atomic[int]
+
+proc exitOnDrainTimeout(sig: cint) {.noconv.} =
   exitNow(0)
+
+proc exitOnStopSignal(sig: cint) {.noconv.} =
+  if inFlightRequests.load(moRelaxed) == 0:
+    exitNow(0)
+  if not stopRequested.exchange(true, moRelaxed):
+    discard alarm(StopDrainCapSeconds)
 
 proc installShutdownSignals*() =
   signal(SIGTERM, exitOnStopSignal)
   signal(SIGINT, exitOnStopSignal)
+  signal(SIGALRM, exitOnDrainTimeout)
+
+proc trackInFlight(handler: RequestHandler): RequestHandler =
+  ## Counts requests being served, so a stop signal can wait for the last one.
+  result = proc(req: Request) {.gcsafe.} =
+    discard inFlightRequests.fetchAdd(1, moRelaxed)
+    try:
+      handler(req)
+    finally:
+      if inFlightRequests.fetchSub(1, moRelaxed) == 1 and
+          stopRequested.load(moRelaxed):
+        # respond() only queues the response; give the serving loop a moment to
+        # write it before we leave, otherwise the last client gets a cut body.
+        discard usleep(ResponseFlushGraceUs)
+        exitNow(0)
 
 proc mummyPattern*(path: string): string =
   var segments: seq[string]
@@ -75,7 +109,7 @@ proc startServer*(cfg: Config) =
     db.migrate()
 
   let router = buildRouter(db)
-  let server = newServer(router)
+  let server = newServer(trackInFlight(router.toHandler))
   installShutdownSignals()
 
   echo "[QOUVER API] Server listening on http://", cfg.host, ":", cfg.port
