@@ -7,6 +7,10 @@
 ## The container image is built from `apps/api/Dockerfile` and
 ## deployed to the VPS by `ops/scripts/deploy-vps.sh`; a source change here needs
 ## a rebuild, a web-only change does not.
+##
+## On the host, `systemctl --user restart qouver-api` returning non-zero is a
+## warning, not a stop: the health gate in rule 9 decides, so a binary that exits
+## before it reports READY is caught by the gate and rolled back, never by systemd.
 
 import std/[parseopt, strutils, options]
 import ./config
