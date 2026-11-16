@@ -164,18 +164,24 @@ if [ "$REV" != "$TRIGGER_REV" ]; then
 fi
 log "==> Trigger commit verified: $REV"
 
-# 4a-2. Nothing to deploy: a commit touching only docs, workflow files or root
+# 4a-2. No image to wait for: a commit touching only docs, workflow files or root
 # markdown produces no image at all (the `changes` job reaches the same verdict
 # from `before..after`), so waiting the window for one would hold the deploy lock
 # for nothing. The previous main tip is HEAD^, the same commit GitHub sends as
 # `before` on a push, so this mirrors CI's filter instead of guessing from a
 # state file that can lag several commits behind.
+#
+# It does NOT exit here. An ops-only commit still carries the quadlet unit and
+# the helper scripts, and until 2026-11-16 this branch returned before step 7
+# could install the unit: a unit fix merged to main sat in the repo until the
+# next image-bearing deploy (BACKLOG CM-05). Step 4c handles that payload.
+OPS_ONLY=0
 PREV_MAIN="$(git rev-parse "${REV}^" 2>/dev/null || true)"
 if [ -n "$PREV_MAIN" ] && [ "$PREV_MAIN" != "$REV" ]; then
   CHANGED="$(git diff --name-only "$PREV_MAIN" "$REV" || true)"
   if [ -n "$CHANGED" ] && ! printf '%s\n' "$CHANGED" | grep -qvE '^(docs/|\.github/|ops/|[^/]*\.md$)'; then
-    log "==> Only docs/workflow/ops paths changed in $REV; no image to wait for, nothing to deploy"
-    exit 0
+    OPS_ONLY=1
+    log "==> Only docs/workflow/ops paths changed in $REV; no image to wait for"
   fi
 fi
 
@@ -230,6 +236,62 @@ for helper in smoke.sh rollback.sh; do
       && log "==> scripts/$helper updated from repo"
   fi
 done
+
+# 4c. Ops-only commit: the unit and the helper scripts above are the whole
+# payload, so no image is pulled and .deployed_rev keeps the image's revision.
+# Install the unit only when it differs, restart only then, and prove the
+# service answers before claiming the deploy; a unit that breaks the API is
+# rolled back to the previous file, which is what step 9 does for an image.
+if [ "$OPS_ONLY" = "1" ]; then
+  UNIT_DIR="$HOME/.config/containers/systemd"
+  UNIT_LIVE="$UNIT_DIR/qouver-api.container"
+  mkdir -p "$UNIT_DIR"
+  if cmp -s "$UNIT_SRC" "$UNIT_LIVE"; then
+    log "==> Ops-only commit $REV: live unit already matches, nothing to deploy or restart"
+    exit 0
+  fi
+  UNIT_BAK=""
+  if [ -f "$UNIT_LIVE" ]; then
+    UNIT_BAK="$UNIT_LIVE.bak-$(date '+%Y%m%d-%H%M%S')"
+    cp -p "$UNIT_LIVE" "$UNIT_BAK" || die "Could not back up $UNIT_LIVE — unit untouched"
+  fi
+  install -m 600 "$UNIT_SRC" "$UNIT_LIVE.new.$$" \
+    && mv -f "$UNIT_LIVE.new.$$" "$UNIT_LIVE" \
+    || die "Could not install $UNIT_SRC"
+  log "==> Ops-only commit $REV: quadlet unit updated (backup ${UNIT_BAK:-none}), restarting qouver-api"
+  systemctl --user daemon-reload
+  systemctl --user restart qouver-api || true
+  OPS_HEALTHY=0
+  for i in $(seq 1 15); do
+    if curl -s -f --max-time 3 "$HEALTH_URL" >/dev/null 2>&1; then OPS_HEALTHY=1; break; fi
+    sleep 2
+  done
+  if [ "$OPS_HEALTHY" = "1" ]; then
+    # No revision check here: the image did not change, so $REV is not what the
+    # container reports. The running image's revision is .deployed_rev, untouched.
+    log "==> Health gate passed after the unit-only restart ($HEALTH_URL 200, image unchanged at $(cat "$STATE_FILE" 2>/dev/null || echo unknown))"
+    exit 0
+  fi
+  log "ERROR: qouver-api did not answer $HEALTH_URL after the unit-only restart — restoring the previous unit"
+  if [ -n "$UNIT_BAK" ] && [ -f "$UNIT_BAK" ]; then
+    install -m 600 "$UNIT_BAK" "$UNIT_LIVE"
+    systemctl --user daemon-reload
+    systemctl --user restart qouver-api || true
+    ROLLED_OK=0
+    for i in $(seq 1 15); do
+      if curl -s -f --max-time 3 "$HEALTH_URL" >/dev/null 2>&1; then ROLLED_OK=1; break; fi
+      sleep 2
+    done
+    if [ "$ROLLED_OK" = "1" ]; then
+      log "==> Unit rollback verified: previous unit restored from $(basename "$UNIT_BAK") and the service answers"
+    else
+      log "WARNING: service still not answering $HEALTH_URL after restoring $(basename "$UNIT_BAK") — needs a human"
+    fi
+  else
+    log "WARNING: no previous unit to restore — the installed unit stays, needs a human"
+  fi
+  exit 1
+fi
 
 # 5. Static web: pull the image CI built and signed, then extract its tree.
 #    The host never runs `pnpm build` any more — every build happens on GitHub.
