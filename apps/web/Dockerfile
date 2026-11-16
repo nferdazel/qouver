@@ -31,7 +31,7 @@ RUN pnpm --filter @qouver/web build
 ARG GIT_REV=dev
 RUN printf '{"rev":"%s","part":"web"}\n' "$GIT_REV" > apps/web/build/healthz
 
-FROM docker.io/library/nginx:1.27-alpine
+FROM docker.io/library/nginx:1.29-alpine
 
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /src/apps/web/build/ /usr/share/nginx/html/
