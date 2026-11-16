@@ -19,8 +19,10 @@ proc onShutdownSignal(sig: cint) {.noconv.} =
 
 proc installShutdownSignals*(server: Server) =
   shutdownTarget = server
-  discard signal(SIGTERM, onShutdownSignal)
-  discard signal(SIGINT, onShutdownSignal)
+  # No `discard`: posix.signal returns nothing on the Nim 2.2 line that CI and
+  # the image build use, so discarding its result is a type error there.
+  signal(SIGTERM, onShutdownSignal)
+  signal(SIGINT, onShutdownSignal)
 
 proc mummyPattern*(path: string): string =
   var segments: seq[string]
