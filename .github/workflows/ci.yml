@@ -65,7 +65,7 @@ jobs:
       - name: Setup Nim
         uses: jiro4989/setup-nim-action@v2
         with:
-          nim-version: '2.2.0'
+          nim-version: '2.4.2'
 
       - name: Install system dependencies (libpq)
         run: |
