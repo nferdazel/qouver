@@ -163,20 +163,21 @@ Deployments run alongside the other systems on Rocky Linux:
 
 ## Documentation
 
-There is no `docs/` directory yet. The decisions and the design direction live in `DESIGN.md` at the
-root and in the code comments of `packages/`, and each app carries its own README.
+There is no `docs/` directory and no `DESIGN.md` at the root yet. Until there is, the design direction
+is the token table above and the decisions are the reasoning found in `packages/ui` and the app
+sources.
 
 ## Security
 
-Do not open a public issue for a vulnerability. The repository does not carry a `SECURITY.md` yet, so
-report privately through GitHub: open the repository's **Security** tab and use
-**Report a vulnerability**. That route is private between you and the maintainer.
+Do not open a public issue for a vulnerability. Reporting channel, what to include and what is in
+scope are in [`SECURITY.md`](SECURITY.md); GitHub private vulnerability reporting is enabled on this
+repository and is the channel it names.
 
 ## Contributing
 
 Fork, branch, pull request against `main`, and keep `./task ci` green before you open it. Commit
-messages follow Conventional Commits. There is no `CONTRIBUTING.md` yet, so this paragraph is the
-whole convention.
+messages follow Conventional Commits. Build steps, what a change must pass, and what not to send are
+in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
