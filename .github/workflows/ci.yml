@@ -1,3 +1,4 @@
+# class: A
 # qouver CI (DEPLOY-FLOW.md §5, §6, §13.3).
 #
 # - no paths-ignore under `on:` (rule 10; the workflow must always run so gate always reports)
