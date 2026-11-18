@@ -1,0 +1,35 @@
+name: Feature or content proposal
+description: A change to the site, the API, or the shared packages.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What is missing or awkward today, and who runs into it.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: The change you propose
+      description: What should exist instead. A sketch is fine.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - apps/web (site)
+        - apps/api (backend)
+        - packages/contracts or api-client
+        - deploy or ops
+        - documentation
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you considered instead
+      description: Optional. Say so if the stack cannot do this today.
