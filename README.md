@@ -13,8 +13,9 @@ release publishes it. There is no admin surface and no runtime editing.
 
 ## Status
 
-Version `VERSION`-equivalent lives in `qouver.nimble` (`version = "0.1.0"`) and is not tagged. The
-site at qouver.com runs from `main`; a push deploys it.
+Version and dependency requirements live in `qouver.nimble` (`version = "0.1.0"`, and
+`requires "nim >= 2.2.0 & < 2.5.0"`). The site at qouver.com runs from `main`: a push deploys it, and the
+repository carries no tags.
 
 ## Architecture
 
