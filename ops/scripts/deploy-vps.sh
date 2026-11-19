@@ -30,6 +30,47 @@ mkdir -p "$APP_DIR/logs" "$BIN_DIR" "$APP_DIR/env" "$APP_DIR/scripts"
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG"; }
 die() { log "ERROR: $*"; exit 1; }
 
+# The web container reports the revision it was built from in /healthz, so a
+# restart that silently kept the old image is caught instead of passing.
+WEB_HEALTH_URL="${QOUVER_WEB_HEALTH_URL:-http://127.0.0.1:8093/healthz}"
+WEB_UNIT="qouver-web.container"
+
+rollback_web() {
+  if podman image exists localhost/qouver-web:prev; then
+    log "==> Rollback web image: localhost/qouver-web:prev -> :local"
+    podman tag localhost/qouver-web:prev localhost/qouver-web:local \
+      && systemctl --user restart qouver-web 2>&1 | tee -a "$LOG" || true
+  else
+    log "==> Rollback web image skipped: no localhost/qouver-web:prev"
+  fi
+  if [ -d "$APP_DIR/web.prev" ]; then
+    rm -rf "$APP_DIR/web"
+    mv "$APP_DIR/web.prev" "$APP_DIR/web"
+    restorecon -RF "$APP_DIR/web/" 2>/dev/null || true
+    log "==> Web assets restored from web.prev"
+  fi
+}
+
+wait_healthy_web() {
+  local want="$1" body rev part
+  rev=""; part=""
+  for _ in $(seq 1 15); do
+    body=$(curl -fsS --max-time 3 "$WEB_HEALTH_URL" 2>/dev/null || true)
+    if [ -n "$body" ]; then
+      rev=$(printf '%s' "$body" | sed -n 's/.*"rev":"\([^"]*\)".*/\1/p')
+      part=$(printf '%s' "$body" | sed -n 's/.*"part":"\([^"]*\)".*/\1/p')
+      if [ "$part" = "web" ] && [ "$rev" = "$want" ]; then
+        log "==> qouver-web healthy rev=$rev"
+        return 0
+      fi
+    fi
+    sleep 2
+  done
+  log "ERROR: $WEB_HEALTH_URL did not report rev=$want (got rev=${rev:-<empty>} part=${part:-<empty>}) — rolling the web image back and aborting"
+  rollback_web
+  exit 1
+}
+
 # CI publishes an image only after every gate job is green, and the push reaches
 # this host before that. A tag that is not in the registry yet is therefore
 # waited for, not read as "this half did not change": the single attempt used to
@@ -259,6 +300,26 @@ if [ "$OPS_ONLY" = "1" ]; then
   UNIT_DIR="$HOME/.config/containers/systemd"
   UNIT_LIVE="$UNIT_DIR/qouver-api.container"
   mkdir -p "$UNIT_DIR"
+
+  # The web unit travels in the same ops-only payload. Install it before the
+  # API branch below can exit 0 on "api unit already matches", or a web-only
+  # unit change would never reach the host.
+  WEB_UNIT_SRC="$MONO_DIR/ops/systemd/$WEB_UNIT"
+  if [ -f "$WEB_UNIT_SRC" ] && ! cmp -s "$WEB_UNIT_SRC" "$UNIT_DIR/$WEB_UNIT"; then
+    install -m 600 "$WEB_UNIT_SRC" "$UNIT_DIR/$WEB_UNIT.new.$$" \
+      && mv -f "$UNIT_DIR/$WEB_UNIT.new.$$" "$UNIT_DIR/$WEB_UNIT" \
+      || die "Could not install $WEB_UNIT_SRC — web unit untouched"
+    log "==> Ops-only commit $REV: quadlet unit $WEB_UNIT updated"
+    systemctl --user daemon-reload
+    if podman image exists localhost/qouver-web:local; then
+      systemctl --user restart qouver-web 2>&1 | tee -a "$LOG" \
+        || log "WARNING: restart qouver-web returned non-zero; checking the web health gate anyway"
+      wait_healthy_web "$(cat "$STATE_FILE" 2>/dev/null || true)"
+    else
+      log "==> No localhost/qouver-web:local yet; $WEB_UNIT will start on the next image deploy"
+    fi
+  fi
+
   if cmp -s "$UNIT_SRC" "$UNIT_LIVE"; then
     log "==> Ops-only commit $REV: live unit already matches, nothing to deploy or restart"
     exit 0
@@ -353,12 +414,37 @@ if [ "$WEB_PULLED" = "1" ]; then
   mkdir -p "$WEB_NEW"
   podman cp "$WEB_CTR:/usr/share/nginx/html/." "$WEB_NEW/"
   podman rm -f "$WEB_CTR" >/dev/null
-  podman rmi "$WEB_DIGEST" >/dev/null 2>&1 || true
   rm -rf "$APP_DIR/web.prev"
   if [ -d "$APP_DIR/web" ]; then mv "$APP_DIR/web" "$APP_DIR/web.prev"; fi
   mv "$WEB_NEW" "$APP_DIR/web"
   restorecon -RF "$APP_DIR/web/" 2>/dev/null || true
   log "==> Web assets swapped from $WEB_DIGEST"
+
+  # 5b. The same image serves qouver.com through the container since 2026-11-19.
+  #     The tree above stays on disk as the rollback target (two good deploys),
+  #     but from here on the container is what answers, so it has to be the
+  #     revision that was just verified.
+  WEB_UNIT_SRC="$MONO_DIR/ops/systemd/$WEB_UNIT"
+  [ -f "$WEB_UNIT_SRC" ] \
+    || die "Quadlet unit missing: $WEB_UNIT_SRC — deploy aborted, web container untouched"
+  if podman image exists localhost/qouver-web:local; then
+    podman tag localhost/qouver-web:local localhost/qouver-web:prev 2>/dev/null || true
+  fi
+  podman tag "$WEB_DIGEST" localhost/qouver-web:local
+  podman rmi "$WEB_IMAGE" >/dev/null 2>&1 || true   # :local and :prev stay the only tags
+  UNIT_DIR="$HOME/.config/containers/systemd"
+  mkdir -p "$UNIT_DIR"
+  if ! cmp -s "$WEB_UNIT_SRC" "$UNIT_DIR/$WEB_UNIT"; then
+    install -m 600 "$WEB_UNIT_SRC" "$UNIT_DIR/$WEB_UNIT.new.$$" \
+      && mv -f "$UNIT_DIR/$WEB_UNIT.new.$$" "$UNIT_DIR/$WEB_UNIT" \
+      || die "Could not install $WEB_UNIT_SRC — web container untouched"
+    log "==> Quadlet unit $WEB_UNIT installed"
+    systemctl --user daemon-reload
+    systemctl --user enable qouver-web >/dev/null 2>&1 || true
+  fi
+  systemctl --user restart qouver-web 2>&1 | tee -a "$LOG" \
+    || log "WARNING: restart qouver-web returned non-zero; checking the web health gate anyway"
+  wait_healthy_web "$REV"
 fi
 
 # 6. API image: pull the one CI built and signed, retag to :local / :prev.
@@ -408,11 +494,9 @@ else
     # job failed. The web tree may already have been swapped by this run, so put
     # it back before aborting — never leave a new web on top of the old API.
     rm -f "$PULL_OUT"
-    if [ "$WEB_PULLED" = "1" ] && [ -d "$APP_DIR/web.prev" ]; then
-      rm -rf "$APP_DIR/web"
-      mv "$APP_DIR/web.prev" "$APP_DIR/web"
-      restorecon -RF "$APP_DIR/web/" 2>/dev/null || true
-      log "==> Web assets restored from web.prev (this run had swapped them)"
+    if [ "$WEB_PULLED" = "1" ]; then
+      rollback_web
+      log "==> Web container rolled back to web.prev (this run had already moved it)"
     fi
     die "No API image for ${SHORT} after the wait window: the gate or the image job did not publish it — deploy aborted, running container untouched"
   else
@@ -489,11 +573,8 @@ else
   else
     log "ERROR: no localhost/qouver-api:prev image to roll back to"
   fi
-  if [ -d "$APP_DIR/web.prev" ]; then
-    rm -rf "$APP_DIR/web"
-    mv "$APP_DIR/web.prev" "$APP_DIR/web"
-    restorecon -RF "$APP_DIR/web/" 2>/dev/null || true
-    log "==> Web assets restored from web.prev"
+  if [ "$WEB_PULLED" = "1" ]; then
+    rollback_web
   fi
   exit 1
 fi

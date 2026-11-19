@@ -1,9 +1,10 @@
 # Quadlet unit for qouver-web: podman + systemd user
 # Path on VPS: ~/.config/containers/systemd/qouver-web.container
 #
-# Not installed yet: today Caddy serves qouver.com from /srv/qouver/apps/qouver/web.
-# Flipping that block to reverse_proxy 127.0.0.1:8093 is the change that makes this
-# unit live, and the Caddy block goes back to `root *` to undo it.
+# Live since 2026-11-19: Caddy's app_qouver block reverse-proxies to 127.0.0.1:8093.
+# The static tree at /srv/qouver/apps/qouver/web is kept as the rollback target;
+# switching the Caddy block back to `root *` plus `disable --now qouver-web` undoes
+# the flip.
 [Unit]
 Description=Qouver web (qouver.com static tree, nginx)
 After=network-online.target
@@ -15,6 +16,12 @@ PublishPort=127.0.0.1:8093:8080
 Pull=never
 NoNewPrivileges=true
 DropCapability=ALL
+# The stock nginx start runs as root, chowns /var/cache/nginx to uid 101 and
+# calls setgid(101); DropCapability=ALL alone kills it with EPERM before it
+# listens (measured 2026-11-19, same finding as fond on 2026-11-15).
+AddCapability=CHOWN
+AddCapability=SETUID
+AddCapability=SETGID
 ReadOnly=true
 Tmpfs=/tmp
 Tmpfs=/var/cache/nginx
