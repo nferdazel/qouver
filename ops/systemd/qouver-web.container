@@ -6,6 +6,8 @@
 # switching the Caddy block back to `root *` plus `disable --now qouver-web` undoes
 # the flip.
 [Unit]
+# Same sink as qouver-api: a web container that dies is user-visible downtime.
+OnFailure=alert@%N.service
 Description=Qouver web (qouver.com static tree, nginx)
 After=network-online.target
 Wants=network-online.target
