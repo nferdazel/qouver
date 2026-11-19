@@ -7,6 +7,11 @@
 #   ./task e2e         Playwright e2e tests & axe-core WCAG 2.2 AA audit
 #   ./task build       Build apps/api binary and apps/web static output
 #   ./task ci          Full verification gate (check + test + e2e + build)
+#   ./task gate        golden contract + shell syntax + secret scan + check (<= 90 s)
+#   ./task gate-full   gate + test + build + e2e (the gate before a release)
+#   ./task release [major|minor|patch] [--skip-check] [--push]
+#                      bump VERSION, run gate-full, commit + annotated tag; never pushes
+#                      unless --push is given
 #   ./task dev         Start development environment
 #   ./task help
 #
@@ -124,7 +129,12 @@ case "${1:-help}" in
   e2e)    cmd_e2e ;;
   build)  cmd_build ;;
   ci)     cmd_ci ;;
+  # Standard CI/CD v2.0: one gate and one release implementation, shared byte-identically with
+  # every other repo. See task.d/gate.sh and task.d/release.sh.
+  gate)      shift; exec sh task.d/gate.sh gate "$@" ;;
+  gate-full) shift; exec sh task.d/gate.sh gate-full "$@" ;;
+  release)   shift; exec sh task.d/release.sh "$@" ;;
   help|*)
-    printf 'Usage: ./task {check|test|e2e|build|ci|help}\n'
+    printf 'Usage: ./task {check|test|e2e|build|ci|gate|gate-full|release|help}\n'
     ;;
 esac

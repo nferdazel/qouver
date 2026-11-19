@@ -33,19 +33,24 @@ jobs:
   # drift fails this repo's own build instead of waiting for a manual audit.
   # The script is a byte-identical copy of the server repo's
   # ops/scripts/contract-check.sh; fix it there and copy it out again.
-  contract:
-    name: "Contract: golden CI/CD rules"
+  # W26: the cheap gate in front of every expensive job. It runs the same script a laptop runs,
+  # so a red run stops here in about a minute instead of at the end of the queue.
+  # `--no-hook` keeps this job free of toolchain installs: the repo-specific static checks run in
+  # the jobs that already have their dependencies, and the security job owns the secret scan.
+  preflight:
+    name: "Preflight: contract, scripts, secret scan"
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: "Contract: check this repo"
-        run: ./ops/scripts/contract-check.sh .
+      - name: "Preflight: ./task gate"
+        run: ./task gate --no-hook
 
   verify:
     name: Verify & Test
+    needs: [preflight]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -93,6 +98,7 @@ jobs:
 
   security:
     name: Security (gitleaks)
+    needs: [preflight]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -139,6 +145,7 @@ jobs:
   # ops/scripts/path-filter-test.sh holds the table of cases this logic must pass.
   changes:
     name: Changes
+    needs: [preflight]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
@@ -341,11 +348,11 @@ jobs:
   gate:
     name: Gate
     if: always()
-    needs: [contract, verify, security, changes]
+    needs: [preflight, verify, security, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      R_CONTRACT: ${{ needs.contract.result }}
+      R_CONTRACT: ${{ needs.preflight.result }}
       R_VERIFY: ${{ needs.verify.result }}
       R_SECURITY: ${{ needs.security.result }}
       R_CHANGES: ${{ needs.changes.result }}
