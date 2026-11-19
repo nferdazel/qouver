@@ -12,10 +12,11 @@ those commits.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-20
+
 ### Changed
 
 - CI/CD v2.0: one local gate (`./task gate`, `./task gate-full`), one release mechanism
   (`./task release`, no push without `--push`), the golden contract job renamed to `preflight`
   and required by every expensive job, and a `VERSION` file that release owns.
 - The vendored `ops/scripts/contract-check.sh` is refreshed to the single shared blob.
-
