@@ -9,9 +9,10 @@
 #   ./task ci          Full verification gate (check + test + e2e + build)
 #   ./task gate        golden contract + shell syntax + secret scan + check (<= 90 s)
 #   ./task gate-full   gate + test + build + e2e (the gate before a release)
-#   ./task release [major|minor|patch] [--skip-check] [--push]
+#   ./task release [major|minor|patch] [--skip-check] [--push] [--current]
 #                      bump VERSION, run gate-full, commit + annotated tag; never pushes
-#                      unless --push is given
+#                      unless --push is given. --current tags the VERSION on disk as it is,
+#                      which is only right for a first release.
 #   ./task dev         Start development environment
 #   ./task help
 #
@@ -135,6 +136,6 @@ case "${1:-help}" in
   gate-full) shift; exec sh task.d/gate.sh gate-full "$@" ;;
   release)   shift; exec sh task.d/release.sh "$@" ;;
   help|*)
-    printf 'Usage: ./task {check|test|e2e|build|ci|gate|gate-full|release|help}\n'
+    awk 'NR > 2 && /^#/ { sub(/^# ?/, ""); print; next } NR > 2 { exit }' "$0"
     ;;
 esac
