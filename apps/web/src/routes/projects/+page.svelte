@@ -1,9 +1,9 @@
 <script lang="ts">
   import SeoHead from '$lib/components/SeoHead.svelte';
   import ProjectRow from '$lib/components/ProjectRow.svelte';
+  import MailLink from '$lib/components/MailLink.svelte';
   import { projects } from '$lib/data/projects.js';
   import {
-    contactEmail,
     githubOrgUrl,
     githubMaintainerUrl,
   } from '$lib/site.js';
@@ -26,7 +26,7 @@
       real problems with disciplined software craft.
     </p>
     <p class="rd-page-head__contact">
-      Working on something similar? <a href="mailto:{contactEmail}">{contactEmail}</a>
+      Working on something similar? <MailLink />
     </p>
   </div>
 </section>
@@ -55,7 +55,7 @@
       <p class="rd-contact-band__copy">Direct is fine.</p>
     </div>
     <div>
-      <a class="rd-mailto" href="mailto:{contactEmail}">{contactEmail}</a>
+      <MailLink class="rd-mailto" />
       <div class="rd-contact-band__links">
         <a href={githubOrgUrl} target="_blank" rel="noopener">github.com/qouver</a>
         <a href={githubMaintainerUrl} target="_blank" rel="noopener">github.com/nferdazel</a>

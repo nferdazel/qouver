@@ -1,9 +1,9 @@
 <script lang="ts">
   import { page } from '$app/state';
   import QMark from '$lib/components/QMark.svelte';
+  import MailLink from '$lib/components/MailLink.svelte';
   import {
     siteName,
-    contactEmail,
     githubOrgUrl,
     githubMaintainerUrl,
   } from '$lib/site.js';
@@ -32,7 +32,7 @@
       <a href="/about" class="nav__link {isActive('/about') ? 'nav__link--active' : ''}">About</a>
       <a href="/contact" class="nav__link {isActive('/contact') ? 'nav__link--active' : ''}">Contact</a>
     </nav>
-    <a class="rd-masthead__mail" href="mailto:{contactEmail}">{contactEmail}</a>
+    <MailLink class="rd-masthead__mail" />
   </div>
 </header>
 
@@ -54,7 +54,7 @@
       </div>
       <div class="rd-footer__cols">
         <div class="rd-footer__col">
-          <h3>Index</h3>
+          <p class="rd-footer__col-title">Index</p>
           <ul>
             <li><a href="/projects">Projects</a></li>
             <li><a href="/journal">Journal</a></li>
@@ -63,9 +63,9 @@
           </ul>
         </div>
         <div class="rd-footer__col">
-          <h3>Contact</h3>
+          <p class="rd-footer__col-title">Contact</p>
           <ul>
-            <li><a href="mailto:{contactEmail}">{contactEmail}</a></li>
+            <li><MailLink /></li>
             <li>
               <a href={githubOrgUrl} target="_blank" rel="noopener">
                 github.com/qouver

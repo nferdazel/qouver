@@ -15,7 +15,7 @@
 
 <section class="container article-reader">
   <div class="article-reader__header">
-    <a href="/journal" class="link link--dim">← Back to Journal</a>
+    <a href="/journal" class="link link--dim link--back">← Back to Journal</a>
     <div class="article-reader__meta mt-3">
       <span class="journal-card__category">{article.category}</span>
       <span class="label">{article.date}</span>
@@ -44,6 +44,6 @@
   <div class="divider mt-3"></div>
 
   <div class="pt-3">
-    <a href="/journal" class="link link--dim">← Back to all articles</a>
+    <a href="/journal" class="link link--dim link--back">← Back to all articles</a>
   </div>
 </section>
