@@ -21,7 +21,7 @@
     <div>
       <h2 class="h3">One craftsman working in public</h2>
       <p class="body mt-2">
-        Qouver is built and maintained by <strong>Sachiel</strong>, <a href="https://github.com/nferdazel" target="_blank" rel="noopener">@nferdazel</a> on GitHub. An independent systems builder focusing on tools that solve real problems.
+        Qouver is built and maintained by <strong>Sachiel</strong>, <a class="link link--back" href="https://github.com/nferdazel" target="_blank" rel="noopener">@nferdazel</a> on GitHub. An independent systems builder focusing on tools that solve real problems.
       </p>
       <p class="body">
         No pitch decks, no corporate bloat. Just software designed with high standards of reliability, performance, and maintainability.

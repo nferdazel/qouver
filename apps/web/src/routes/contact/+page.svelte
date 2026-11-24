@@ -1,7 +1,7 @@
 <script lang="ts">
   import SeoHead from '$lib/components/SeoHead.svelte';
+  import MailLink from '$lib/components/MailLink.svelte';
   import {
-    contactEmail,
     githubOrgUrl,
     githubMaintainerUrl,
   } from '$lib/site.js';
@@ -180,9 +180,7 @@
     <div class="contact-list">
       <div class="contact-row">
         <span class="contact-row__label">Email</span>
-        <a class="contact-row__value" href="mailto:{contactEmail}">
-          {contactEmail}
-        </a>
+        <MailLink class="contact-row__value" />
         <span class="contact-row__note">Replies within a day or two</span>
       </div>
 

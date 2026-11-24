@@ -1,6 +1,7 @@
 <script lang="ts">
   import SeoHead from '$lib/components/SeoHead.svelte';
   import ProjectRow from '$lib/components/ProjectRow.svelte';
+  import MailLink from '$lib/components/MailLink.svelte';
   import { projects } from '$lib/data/projects.js';
   import { journalArticles } from '$lib/data/journal.js';
   import {
@@ -72,13 +73,13 @@
         </p>
         <div class="rd-hero__actions">
           <a class="rd-btn" href="#systems">Read the systems</a>
-          <a class="rd-link-line" href="mailto:{contactEmail}">{contactEmail}</a>
+          <MailLink class="rd-link-line" />
         </div>
       </div>
     </div>
 
     <div class="rd-hero__motto">
-      <p>Built from what others leave behind.</p>
+      <p>Four systems, all of them running for someone real.</p>
       <span>qouver.com</span>
     </div>
   </div>
@@ -191,7 +192,7 @@
       <p class="rd-contact-band__copy">Direct is fine.</p>
     </div>
     <div>
-      <a class="rd-mailto" href="mailto:{contactEmail}">{contactEmail}</a>
+      <MailLink class="rd-mailto" />
       <div class="rd-contact-band__links">
         <a href={githubOrgUrl} target="_blank" rel="noopener">github.com/qouver</a>
         <a href={githubMaintainerUrl} target="_blank" rel="noopener">github.com/nferdazel</a>

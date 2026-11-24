@@ -6,7 +6,7 @@
 <SeoHead
   title="Page not found · Qouver"
   description="The page you are looking for does not exist. Back to the home of systems and ideas."
-  path="/404.html"
+  path="/404"
 />
 
 <section class="page-head container">
@@ -20,5 +20,5 @@
 </section>
 
 <section class="section container">
-  <a href="/" class="link">Back to home</a>
+  <a href="/" class="link link--back">Back to home</a>
 </section>

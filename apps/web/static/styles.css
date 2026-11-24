@@ -27,26 +27,63 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono",
     monospace;
 
-  /* Type scale */
-  --step--1: 0.8125rem;
-  --step-0: 1rem;
-  --step-1: 1.25rem;
-  --step-2: 1.5625rem;
+  /* Type scale. One ladder, no orphans: a value that is not on it is a bug.
+     0.875rem (14px) is the floor, so a stamp or a caption stays readable at
+     arm's length. Display steps are named by role, not by number, because the
+     same 1.75rem means a different thing in a headline and in a footnote. */
+  --step--1: 0.875rem; /* 14 label, stamp, caption */
+  --step-0: 1rem; /* 16 body */
+  --step-0-5: 1.125rem; /* 18 lead, deck */
+  --step-1: 1.25rem; /* 20 sub-head, sub-lead */
+  --step-2: 1.5rem; /* 24 item title, folio label */
+  --step-2-5: 1.75rem; /* 28 index numeral */
   --step-3: clamp(1.75rem, 3vw, 2.5rem);
   --step-4: clamp(2.25rem, 5vw, 3.75rem);
   --step-5: clamp(3rem, 8vw, 6.5rem);
 
-  /* Spacing */
-  --s-1: 0.25rem;
-  --s-2: 0.5rem;
-  --s-3: 0.75rem;
-  --s-4: 1rem;
-  --s-5: 1.25rem;
-  --s-6: 1.5rem;
-  --s-8: 2rem;
-  --s-12: 3rem;
-  --s-16: 4rem;
-  --s-24: 6rem;
+  /* Display ladder. Six roles cover every headline on the site; each one was
+     already in use, these are its measured values under a name. */
+  --display-hero: clamp(2.85rem, 7.2vw, 6.25rem);
+  --display-page: clamp(2.5rem, 6vw, 4.5rem);
+  --display-section: clamp(1.9rem, 4vw, 3rem);
+  --display-quote: clamp(1.75rem, 4.2vw, 3.5rem);
+  --display-band: clamp(1.75rem, 3.6vw, 2.75rem);
+  --display-note: clamp(1.6rem, 3.4vw, 2.5rem);
+  --display-item: clamp(1.5rem, 2.6vw, 2.125rem);
+  --display-deck: clamp(1.15rem, 1.9vw, 1.5rem);
+
+  /* Spacing: one 4px grid with a 2px half-step. Every literal gap, pad and
+     margin on the site resolves to a step on this ladder, so two neighbours
+     never differ by 1.6px by accident. */
+  --s-0: 0.125rem; /* 2 */
+  --s-1: 0.25rem; /* 4 */
+  --s-1-5: 0.375rem; /* 6 */
+  --s-2: 0.5rem; /* 8 */
+  --s-3: 0.75rem; /* 12 */
+  --s-4: 1rem; /* 16 */
+  --s-5: 1.25rem; /* 20 */
+  --s-6: 1.5rem; /* 24 */
+  --s-7: 1.75rem; /* 28 */
+  --s-8: 2rem; /* 32 */
+  --s-10: 2.5rem; /* 40 */
+  --s-12: 3rem; /* 48 */
+  --s-14: 3.5rem; /* 56 */
+  --s-16: 4rem; /* 64 */
+  --s-20: 5rem; /* 80 */
+  --s-24: 6rem; /* 96 */
+  --s-28: 7rem; /* 112 */
+
+  /* Vertical rhythm: five roles, not thirteen one-off clamps. */
+  --pad-hero: clamp(3rem, 7vw, 6rem);
+  --pad-section: clamp(3rem, 6vw, 5.5rem);
+  --pad-band: clamp(2.5rem, 4.5vw, 3.5rem);
+  --pad-head: clamp(2.5rem, 5vw, 4rem);
+  --pad-tight: clamp(2rem, 4vw, 3rem);
+
+  /* Caps tracking: em-based tracking grows with the type, so 14px caps from an
+     old 11px stamp need a tighter value than 0.1em to keep the same line length. */
+  --track-caps: 0.07em;
+  --track-caps-tight: 0.05em;
 
   --wrap: 1200px;
   --gut: clamp(1.25rem, 4vw, 3rem);
@@ -132,11 +169,11 @@ a {
 }
 
 .section {
-  padding-block: clamp(3.5rem, 8vw, 7rem);
+  padding-block: var(--pad-section);
 }
 
 .section--tight {
-  padding-block: clamp(2rem, 4vw, 3.5rem);
+  padding-block: var(--pad-tight);
 }
 
 .divider {
@@ -193,7 +230,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--track-caps);
   line-height: 1.2;
   color: var(--ink-3);
 }
@@ -244,7 +281,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
   text-decoration: none;
   color: var(--ink);
   border-bottom: 2px solid var(--ink);
@@ -279,7 +316,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
   text-decoration: none;
   border: 2px solid var(--ink);
   background: var(--ink);
@@ -329,7 +366,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
 }
 
 .skip-link:focus {
@@ -392,7 +429,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
   text-decoration: none;
   color: var(--ink-2);
 }
@@ -447,7 +484,7 @@ h3,
    9. Hero
    -------------------------------------------------------------------------- */
 .hero {
-  padding-block: clamp(3rem, 7vw, 6rem);
+  padding-block: var(--pad-hero);
 }
 
 .hero-inner {
@@ -568,7 +605,7 @@ h3,
 }
 
 .page-head {
-  padding-top: clamp(2.5rem, 6vw, 4rem);
+  padding-top: var(--pad-head);
   padding-bottom: var(--s-8);
   border-bottom: 2px solid var(--ink);
 }
@@ -585,7 +622,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--track-caps);
   color: var(--ink-3);
 }
 
@@ -647,7 +684,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--track-caps);
   color: var(--ink-3);
 }
 
@@ -694,7 +731,7 @@ h3,
 }
 
 .stack-pill {
-  padding: 0.15rem 0.5rem;
+  padding: var(--s-0) var(--s-2);
   font-size: var(--step--1);
   font-weight: 500;
   color: var(--ink-2);
@@ -728,11 +765,11 @@ h3,
   display: inline-flex;
   align-items: center;
   gap: var(--s-1);
-  padding: 0.15rem 0.4rem;
+  padding: var(--s-0) var(--s-1-5);
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
   white-space: nowrap;
   color: var(--ink);
   border: 1px solid var(--ink);
@@ -796,7 +833,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--track-caps);
   color: var(--ink-3);
 }
 
@@ -862,8 +899,9 @@ h3,
 .editorial__label {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: var(--step-2);
-  line-height: 1;
+  font-size: var(--step-1);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
   color: var(--accent);
 }
 
@@ -911,6 +949,15 @@ h3,
   display: block;
   margin-top: var(--s-1);
   font-weight: 600;
+}
+
+/* A link inside the metadata strip sits in a div, not a sentence, so it needs
+   its own box rather than leaning on inline prose. */
+.project-detail__meta-item .link {
+  display: inline-block;
+  padding-block: var(--s-1);
+  margin-block: calc(var(--s-1) * -1);
+  text-underline-offset: 0.3em;
 }
 
 .case-decisions {
@@ -982,7 +1029,7 @@ h3,
 .article-reader {
   max-width: 72ch;
   margin-inline: auto;
-  padding-block: clamp(2.5rem, 6vw, 5rem);
+  padding-block: var(--pad-section);
 }
 
 .article-reader__header {
@@ -995,7 +1042,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--track-caps);
   color: var(--ink-3);
 }
 
@@ -1027,7 +1074,7 @@ h3,
 .article-reader__body ul,
 .article-reader__body ol {
   margin-top: var(--s-4);
-  padding-left: 1.25rem;
+  padding-left: var(--s-5);
 }
 
 .article-reader__body li {
@@ -1063,13 +1110,19 @@ h3,
   background: var(--ink);
   color: var(--on-dark);
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: var(--step--1);
   line-height: 1.6;
 }
 
 .article-reader__body code {
   font-family: var(--font-mono);
   font-size: 0.9em;
+}
+
+/* Inside the block the <pre> already sets the size, so 0.9em would compound
+   down to 12.6px and put code under the 14px floor. */
+.article-reader__body pre code {
+  font-size: inherit;
 }
 
 .article-reader__body :not(pre) > code {
@@ -1083,7 +1136,7 @@ h3,
 @media (max-width: 480px) {
   .article-reader__body pre {
     padding: var(--s-4);
-    font-size: 0.75rem;
+    font-size: var(--step--1);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
@@ -1107,7 +1160,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--track-caps);
   color: var(--ink-3);
 }
 
@@ -1217,7 +1270,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--track-caps);
   color: var(--on-dark-2);
 }
 
@@ -1268,7 +1321,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--track-caps);
   color: var(--on-dark-2);
 }
 
@@ -1300,7 +1353,7 @@ h3,
   border-top: 1px solid rgba(201, 196, 184, 0.3);
   font-size: var(--step--1);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
   color: var(--on-dark-2);
 }
 
@@ -1367,22 +1420,33 @@ h3,
 
 @media (max-width: 719px) {
   .rd-nav .nav__link {
-    padding-inline: 0.25rem;
+    padding-inline: var(--s-1);
   }
 
-  .rd-nav .nav__link--active::after {
-    left: 0.25rem;
-    right: 0.25rem;
+  .rd-nav .nav__link--active::after,
+  .rd-nav .nav__link::before {
+    left: var(--s-1);
+    right: var(--s-1);
     bottom: 6px;
+  }
+}
+
+/* Four uppercase links at the 14px floor are wider than a 320px screen. Below
+   380px the nav takes two rows rather than clipping CONTACT, and the type floor
+   stays where it is. */
+@media (max-width: 379px) {
+  .rd-nav {
+    flex-wrap: wrap;
+    row-gap: 0;
   }
 }
 
 /* --- Primitives --- */
 .rd-kicker {
-  font-size: 0.75rem;
+  font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--track-caps);
   line-height: 1.3;
   color: var(--ink-3);
 }
@@ -1397,12 +1461,12 @@ h3,
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  padding: 0 1.4rem;
+  padding: 0 var(--s-5);
   font-family: var(--font-sans);
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
   text-decoration: none;
   border: 2px solid var(--ink);
   background: var(--ink);
@@ -1420,7 +1484,7 @@ h3,
   color: var(--ink);
   border-width: 1px;
   border-color: var(--rule);
-  padding-inline: 0.9rem;
+  padding-inline: var(--s-4);
 }
 
 .rd-btn--ghost:hover {
@@ -1458,18 +1522,18 @@ h3,
 
 /* --- Hero --- */
 .rd-hero {
-  padding-block: clamp(2.75rem, 6.5vw, 5.5rem) clamp(2rem, 4vw, 3rem);
+  padding-block: var(--pad-hero) var(--pad-tight);
 }
 
 .rd-hero__grid {
   display: grid;
-  gap: 1.75rem 3rem;
+  gap: var(--s-7) var(--s-12);
 }
 
 .rd-hero__title {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(2.85rem, 7.2vw, 6.25rem);
+  font-size: var(--display-hero);
   line-height: 0.94;
   letter-spacing: -0.025em;
   max-width: 17ch;
@@ -1477,13 +1541,13 @@ h3,
 
 .rd-hero__aside {
   display: grid;
-  gap: 1.5rem;
+  gap: var(--s-6);
   align-content: end;
 }
 
 .rd-hero__deck {
   max-width: 46ch;
-  font-size: 1.125rem;
+  font-size: var(--step-0-5);
   line-height: 1.55;
   color: var(--ink-2);
 }
@@ -1492,24 +1556,24 @@ h3,
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem 1.25rem;
+  gap: var(--s-3) var(--s-5);
 }
 
 .rd-hero__motto {
-  margin-top: clamp(2rem, 4vw, 3.5rem);
-  padding-top: 1rem;
+  margin-top: var(--pad-tight);
+  padding-top: var(--s-4);
   border-top: 1px solid var(--rule);
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.5rem 2rem;
+  gap: var(--s-2) var(--s-8);
 }
 
 .rd-hero__motto p {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(1.15rem, 1.9vw, 1.5rem);
+  font-size: var(--display-deck);
   line-height: 1.25;
   color: var(--ink-2);
 }
@@ -1518,7 +1582,7 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--track-caps);
   color: var(--ink-3);
 }
 
@@ -1533,9 +1597,9 @@ h3,
 .rd-sec-head {
   position: relative;
   display: grid;
-  gap: 0.75rem;
+  gap: var(--s-3);
   border-top: 2px solid var(--ink);
-  padding-top: 1.25rem;
+  padding-top: var(--s-5);
 }
 
 .rd-sec-head::before {
@@ -1557,7 +1621,7 @@ h3,
 .rd-sec-head h2 {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(1.9rem, 4vw, 3rem);
+  font-size: var(--display-section);
   line-height: 1.02;
   letter-spacing: -0.02em;
 }
@@ -1571,7 +1635,7 @@ h3,
   .rd-sec-head {
     grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
     align-items: end;
-    gap: 2rem;
+    gap: var(--s-8);
   }
 
   .rd-sec-head__note {
@@ -1581,28 +1645,28 @@ h3,
 
 /* --- Production ledger --- */
 .rd-ledger-section {
-  padding-block: clamp(2.5rem, 5vw, 4rem) clamp(3rem, 6vw, 5rem);
+  padding-block: var(--pad-head) var(--pad-section);
 }
 
 .rd-ledger {
-  margin-top: clamp(1.75rem, 3vw, 2.5rem);
+  margin-top: var(--s-7);
 }
 
 .rd-ledger__labels {
   display: none;
-  padding-bottom: 0.6rem;
+  padding-bottom: var(--s-2);
   border-bottom: 1px solid var(--ink);
-  font-size: 0.6875rem;
+  font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--track-caps);
   color: var(--ink-3);
 }
 
 .rd-ledger-row {
   display: grid;
-  gap: 0.6rem 1.5rem;
-  padding-block: 1.75rem;
+  gap: var(--s-2) var(--s-6);
+  padding-block: var(--s-7);
   border-bottom: 1px solid var(--rule);
   transition: background 0.15s ease;
 }
@@ -1614,14 +1678,14 @@ h3,
 .rd-ledger-row__index {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 1.5rem;
+  font-size: var(--step-2);
   line-height: 1;
   color: var(--accent);
 }
 
 .rd-ledger-row__main {
   display: grid;
-  gap: 0.45rem;
+  gap: var(--s-1-5);
   min-width: 0;
 }
 
@@ -1629,18 +1693,18 @@ h3,
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.75rem;
-  font-size: 0.6875rem;
+  gap: var(--s-2) var(--s-3);
+  font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--track-caps);
   color: var(--ink-3);
 }
 
 .rd-ledger-row__name {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(1.5rem, 2.6vw, 2.125rem);
+  font-size: var(--display-item);
   line-height: 1.05;
   letter-spacing: -0.01em;
 }
@@ -1657,7 +1721,7 @@ h3,
 .rd-ledger-row__desc {
   max-width: 64ch;
   color: var(--ink-2);
-  font-size: 0.9375rem;
+  font-size: var(--step-0);
   line-height: 1.6;
 }
 
@@ -1672,20 +1736,20 @@ h3,
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1.25rem;
+  gap: var(--s-2) var(--s-5);
 }
 
 .rd-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.1rem 0.4rem;
+  gap: var(--s-1-5);
+  padding: var(--s-0) var(--s-1-5);
   border: 1px solid var(--ink-3);
   color: var(--ink-3);
-  font-size: 0.6875rem;
+  font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
   white-space: nowrap;
 }
 
@@ -1709,15 +1773,15 @@ h3,
 .rd-focus-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 0.5rem;
-  margin-top: 0.35rem;
+  gap: var(--s-1-5) var(--s-2);
+  margin-top: var(--s-1-5);
 }
 
 .rd-focus-list span {
-  font-size: 0.75rem;
+  font-size: var(--step--1);
   color: var(--ink-3);
   border: 1px solid var(--rule);
-  padding: 0.1rem 0.45rem;
+  padding: var(--s-0) var(--s-1-5);
   white-space: nowrap;
 }
 
@@ -1726,7 +1790,7 @@ h3,
   .rd-ledger-row {
     display: grid;
     grid-template-columns: 3.25rem minmax(0, 1fr) 10rem 7.25rem;
-    column-gap: 1.75rem;
+    column-gap: var(--s-7);
     align-items: start;
   }
 
@@ -1735,11 +1799,11 @@ h3,
   }
 
   .rd-ledger-row {
-    padding-block: 2rem;
+    padding-block: var(--s-8);
   }
 
   .rd-ledger-row__index {
-    font-size: 1.75rem;
+    font-size: var(--step-2-5);
   }
 
   .rd-ledger-row__stack {
@@ -1749,7 +1813,7 @@ h3,
   .rd-ledger-row__actions {
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.7rem;
+    gap: var(--s-3);
   }
 }
 
@@ -1757,7 +1821,7 @@ h3,
 .rd-method {
   background: var(--paper-2);
   border-block: 2px solid var(--ink);
-  padding-block: clamp(2.25rem, 4.5vw, 3.5rem);
+  padding-block: var(--pad-band);
 }
 
 .rd-method__grid {
@@ -1767,8 +1831,8 @@ h3,
 
 .rd-method__item {
   display: grid;
-  gap: 0.4rem;
-  padding-block: 1.5rem;
+  gap: var(--s-1-5);
+  padding-block: var(--s-6);
   border-top: 1px solid var(--rule);
 }
 
@@ -1780,20 +1844,20 @@ h3,
 .rd-method__num {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 1.75rem;
+  font-size: var(--step-2-5);
   line-height: 1;
   color: var(--accent);
 }
 
 .rd-method__item h3 {
-  font-size: 1.125rem;
+  font-size: var(--step-0-5);
   font-weight: 600;
   line-height: 1.25;
 }
 
 .rd-method__item p {
   max-width: 38ch;
-  font-size: 0.9375rem;
+  font-size: var(--step-0);
   color: var(--ink-2);
 }
 
@@ -1805,7 +1869,7 @@ h3,
   .rd-method__item {
     border-top: 0;
     padding-block: 0;
-    padding-inline: 2rem;
+    padding-inline: var(--s-8);
     border-left: 1px solid var(--rule);
   }
 
@@ -1821,17 +1885,17 @@ h3,
 
 /* --- Latest note --- */
 .rd-notes {
-  padding-block: clamp(3rem, 6vw, 5rem);
+  padding-block: var(--pad-section);
 }
 
 .rd-notes__grid {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--s-5);
 }
 
 .rd-notes__main {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--s-3);
   justify-items: start;
 }
 
@@ -1839,14 +1903,14 @@ h3,
   font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--track-caps);
   color: var(--ink-3);
 }
 
 .rd-notes__title {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(1.6rem, 3.4vw, 2.5rem);
+  font-size: var(--display-note);
   line-height: 1.1;
   letter-spacing: -0.015em;
   max-width: 30ch;
@@ -1869,11 +1933,11 @@ h3,
 @media (min-width: 900px) {
   .rd-notes__grid {
     grid-template-columns: 13rem minmax(0, 1fr);
-    gap: 2.5rem;
+    gap: var(--s-10);
   }
 
   .rd-notes__grid > .rd-kicker {
-    padding-top: 0.55rem;
+    padding-top: var(--s-2);
   }
 }
 
@@ -1881,14 +1945,14 @@ h3,
 .rd-manifesto {
   background: var(--ink);
   color: var(--on-dark);
-  padding-block: clamp(3rem, 7vw, 6rem);
+  padding-block: var(--pad-hero);
 }
 
 .rd-manifesto__quote {
   max-width: 30ch;
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(1.75rem, 4.2vw, 3.5rem);
+  font-size: var(--display-quote);
   line-height: 1.14;
   letter-spacing: -0.015em;
   color: var(--paper);
@@ -1904,9 +1968,9 @@ h3,
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-top: clamp(2rem, 4vw, 3rem);
-  padding-top: 1.1rem;
+  gap: var(--s-4);
+  margin-top: var(--pad-tight);
+  padding-top: var(--s-4);
   border-top: 1px solid rgba(201, 196, 184, 0.3);
 }
 
@@ -1914,25 +1978,25 @@ h3,
 .rd-contact-band {
   background: var(--paper-2);
   border-top: 2px solid var(--ink);
-  padding-block: clamp(2.75rem, 5vw, 4.5rem);
+  padding-block: var(--pad-band);
 }
 
 .rd-contact-band__grid {
   display: grid;
-  gap: 1.75rem;
+  gap: var(--s-7);
 }
 
 .rd-contact-band h2 {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(1.75rem, 3.6vw, 2.75rem);
+  font-size: var(--display-band);
   line-height: 1.06;
   letter-spacing: -0.02em;
   max-width: 22ch;
 }
 
 .rd-contact-band__copy {
-  margin-top: 0.6rem;
+  margin-top: var(--s-2);
   max-width: 42ch;
   color: var(--ink-2);
 }
@@ -1941,7 +2005,7 @@ h3,
   display: inline-block;
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(1.5rem, 3.6vw, 2.6rem);
+  font-size: var(--display-band);
   line-height: 1.15;
   letter-spacing: -0.01em;
   text-decoration: none;
@@ -1959,8 +2023,8 @@ h3,
 .rd-contact-band__links {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1.5rem;
-  margin-top: 1.1rem;
+  gap: var(--s-2) var(--s-6);
+  margin-top: var(--s-4);
 }
 
 .rd-contact-band__links a {
@@ -1982,20 +2046,20 @@ h3,
   .rd-contact-band__grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
     align-items: end;
-    gap: 3rem;
+    gap: var(--s-12);
   }
 }
 
 /* --- Footer (structure from the mockup) --- */
 .rd-footer__top {
   display: grid;
-  gap: 2rem;
+  gap: var(--s-8);
 }
 
 .rd-footer__brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: var(--s-3);
   color: var(--paper);
   text-decoration: none;
   min-height: 44px;
@@ -2006,24 +2070,25 @@ h3,
 }
 
 .rd-footer__tagline {
-  margin-top: 0.6rem;
+  margin-top: var(--s-2);
   max-width: 32ch;
   color: var(--on-dark-2);
-  font-size: 0.9375rem;
+  font-size: var(--step-0);
 }
 
 .rd-footer__cols {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2rem;
+  gap: var(--s-8);
 }
 
-.rd-footer__col h3 {
-  margin-bottom: 0.7rem;
-  font-size: 0.6875rem;
+.rd-footer__col h3,
+.rd-footer__col-title {
+  margin-bottom: var(--s-3);
+  font-size: var(--step--1);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--track-caps);
   color: var(--on-dark-2);
 }
 
@@ -2031,7 +2096,7 @@ h3,
   list-style: none;
   padding: 0;
   display: grid;
-  gap: 0.35rem;
+  gap: var(--s-1-5);
 }
 
 .rd-footer__col a {
@@ -2041,6 +2106,16 @@ h3,
   color: var(--on-dark);
   text-decoration: none;
   overflow-wrap: anywhere;
+}
+
+/* Back links sit in a metadata row, so their box has to clear the 24px tap
+   target without opening a gap in the rhythm: 4px of block padding, and a
+   matching negative block margin so the line box stays where it was. */
+.link--back {
+  display: inline-block;
+  padding-block: var(--s-1);
+  margin-block: calc(var(--s-1) * -1);
+  text-underline-offset: 0.3em;
 }
 
 .rd-footer__col a:hover {
@@ -2053,13 +2128,13 @@ h3,
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 0.4rem 1.5rem;
-  margin-top: clamp(2rem, 4vw, 3rem);
-  padding-top: 1rem;
+  gap: var(--s-1-5) var(--s-6);
+  margin-top: var(--pad-tight);
+  padding-top: var(--s-4);
   border-top: 1px solid rgba(201, 196, 184, 0.3);
-  font-size: 0.75rem;
+  font-size: var(--step--1);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
   color: var(--on-dark-2);
 }
 
@@ -2072,7 +2147,7 @@ h3,
 
 /* --- Inner page head and catalogue --- */
 .rd-page-head {
-  padding-block: clamp(2.5rem, 5vw, 4rem) clamp(1.75rem, 3vw, 2.5rem);
+  padding-block: var(--pad-head) var(--pad-tight);
   border-bottom: 2px solid var(--ink);
   position: relative;
 }
@@ -2096,34 +2171,34 @@ h3,
 .rd-page-head__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  margin-bottom: 0.9rem;
+  gap: var(--s-2) var(--s-4);
+  margin-bottom: var(--s-4);
 }
 
 .rd-page-title {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-size: var(--display-page);
   line-height: 0.98;
   letter-spacing: -0.025em;
 }
 
 .rd-page-head__lead {
-  margin-top: 1rem;
+  margin-top: var(--s-4);
   max-width: 56ch;
-  font-size: 1.125rem;
+  font-size: var(--step-0-5);
   line-height: 1.55;
   color: var(--ink-2);
 }
 
 .rd-page-head__contact {
-  margin-top: 1.25rem;
+  margin-top: var(--s-5);
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.4rem 0.6rem;
+  gap: var(--s-1-5) var(--s-2);
   color: var(--ink-2);
-  font-size: 0.9375rem;
+  font-size: var(--step-0);
 }
 
 .rd-page-head__contact a {
@@ -2141,7 +2216,7 @@ h3,
 }
 
 .rd-catalogue {
-  padding-block: clamp(2rem, 4vw, 3rem) clamp(3rem, 6vw, 5rem);
+  padding-block: var(--pad-tight) var(--pad-section);
 }
 
 /* ==========================================================================
@@ -2183,16 +2258,22 @@ h3,
 .rd-home .rd-hero__mark-stroke {
   position: absolute;
   left: -1%;
-  bottom: -0.1em;
+  bottom: -0.22em;
   width: 102%;
-  height: 0.2em;
+  height: 0.18em;
   overflow: visible;
   color: var(--ink-mark);
 }
 
+/* The stroke rides below the descenders instead of through them, so it needs
+   the room it now occupies and the line after it has to clear the same box. */
+.rd-home .rd-hero__mark {
+  padding-bottom: 0.1em;
+}
+
 /* Status read as a drawn oval rather than a square dot in a box. */
 .rd-home .rd-status {
-  gap: 0.45rem;
+  gap: var(--s-1-5);
   padding: 0;
   border: 0;
 }
@@ -2211,21 +2292,21 @@ h3,
   background: transparent;
   border-top: 1px solid var(--rule);
   color: var(--ink);
-  padding-block: clamp(3.5rem, 8vw, 7rem);
+  padding-block: var(--pad-hero);
   text-align: center;
 }
 
 .rd-home .rd-manifesto__mark {
   width: 3.25rem;
   height: 2.65rem;
-  margin: 0 auto 1.4rem;
+  margin: 0 auto var(--s-5);
   color: var(--ink-mark);
 }
 
 .rd-home .rd-manifesto__quote {
   margin-inline: auto;
   max-width: 30ch;
-  font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+  font-size: var(--display-note);
   line-height: 1.2;
   letter-spacing: -0.012em;
   color: var(--ink);
@@ -2238,8 +2319,8 @@ h3,
 
 .rd-home .rd-manifesto__row {
   justify-content: center;
-  gap: 1rem 1.6rem;
-  margin-top: 2.1rem;
+  gap: var(--s-4) var(--s-6);
+  margin-top: var(--s-8);
   padding-top: 0;
   border-top: 0;
 }
@@ -2301,8 +2382,232 @@ h3,
   fill: var(--ink-mark);
 }
 
+/* --- 404 --- */
+.rd-404 {
+  display: grid;
+  gap: var(--s-5);
+  justify-items: start;
+  max-width: 52ch;
+}
+
+.rd-404__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-6);
+}
+
 /* ==========================================================================
-   23. Print: home only
+   23. Hover language
+   One instrument, applied everywhere: a rule wipes left -> right on the
+   element's own baseline, and the thing it marks moves with it. A colour
+   swap reads as "this is a link"; a wipe reads as "this is a ledger that
+   answers when you touch a row". Nothing here needs JS, and the reduced
+   motion block in section 2 already turns every transition off.
+
+   The wipe is a background gradient sized from 0 to 100% on the Y axis it
+   replaces a border with (background-origin: border-box puts it exactly on
+   the border's pixel row, so rest and hover read as the same line thickening
+   and changing ink rather than two lines appearing).
+   ========================================================================== */
+
+.rd-ledger-row,
+.rd-notes__main,
+.project-card {
+  position: relative;
+}
+
+/* Row hover: a 2px accent rule grows down the left edge, under the numeral. */
+.rd-ledger-row::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--s-4) * -1);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  transform: scaleY(0);
+  transform-origin: 50% 0;
+  transition: transform 0.24s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.rd-ledger-row:hover::before,
+.rd-ledger-row:focus-within::before {
+  transform: scaleY(1);
+}
+
+.rd-ledger-row__index {
+  transition: transform 0.24s cubic-bezier(0.2, 0.7, 0.3, 1),
+    color 0.24s ease;
+}
+
+.rd-ledger-row:hover .rd-ledger-row__index,
+.rd-ledger-row:focus-within .rd-ledger-row__index {
+  transform: translateX(var(--s-1));
+}
+
+/* A stamp that gets inked when the row is live. */
+.rd-ledger-row:hover .rd-status--live,
+.rd-ledger-row:focus-within .rd-status--live {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.rd-ledger-row:hover .rd-status--backend,
+.rd-ledger-row:focus-within .rd-status--backend {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* Home draws the stamp as a hand-drawn oval, so it fills instead of flooding. */
+.rd-home .rd-ledger-row:hover .rd-status__dot,
+.rd-home .rd-ledger-row:focus-within .rd-status__dot {
+  background: currentColor;
+}
+
+/* The name gets a rule that draws itself under the word. */
+.rd-ledger-row__name a,
+.brand__word,
+.rd-footer__brand .brand__word {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0 2px;
+  transition: background-size 0.24s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.rd-ledger-row:hover .rd-ledger-row__name a,
+.rd-ledger-row:focus-within .rd-ledger-row__name a,
+.brand:hover .brand__word,
+.brand:focus-visible .brand__word,
+.rd-footer__brand:hover .brand__word,
+.rd-footer__brand:focus-visible .brand__word {
+  background-size: 100% 2px;
+  color: var(--accent);
+}
+
+/* Nav: hover previews the active underline instead of only darkening. */
+.rd-nav .nav__link::before {
+  content: "";
+  position: absolute;
+  left: var(--s-3);
+  right: var(--s-3);
+  bottom: 12px;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.rd-nav .nav__link:hover::before {
+  transform: scaleX(1);
+}
+
+.rd-nav .nav__link--active::before {
+  content: none;
+}
+
+/* Underlined actions: the ink rule becomes the accent rule, drawn in from the
+   left over the rule it replaces. */
+.link-action,
+.rd-link-line,
+.rd-mailto,
+.contact-row__value a {
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-repeat: no-repeat;
+  background-origin: border-box;
+  background-position: 0 100%;
+  background-size: 0 2px;
+  transition: background-size 0.22s cubic-bezier(0.2, 0.7, 0.3, 1),
+    color 0.22s ease, border-color 0.22s ease;
+}
+
+.link-action:hover,
+.rd-link-line:hover,
+.rd-mailto:hover,
+.contact-row__value a:hover,
+.link-action:focus-visible,
+.rd-link-line:focus-visible,
+.rd-mailto:focus-visible,
+.contact-row__value a:focus-visible {
+  background-size: 100% 2px;
+  border-color: var(--rule);
+}
+
+/* Inside the ink flood the rule is paper, because accent would sink into it. */
+.link-action--light,
+.rd-link-line--light,
+.rd-home .rd-mailto,
+.manifesto .contact-row__value a {
+  background-image: linear-gradient(currentColor, currentColor);
+}
+
+/* Buttons fill with a wipe rather than blinking. Ghost buttons stay outlined:
+   inverting a hairline outline into a block is a different object, not a state. */
+.btn,
+.rd-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.btn::before,
+.rd-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--paper);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.26s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.btn--secondary::before {
+  background: var(--ink);
+}
+
+.btn--ghost::before,
+.rd-btn--ghost::before {
+  content: none;
+}
+
+.btn--ghost:hover,
+.btn--ghost:focus-visible {
+  background: var(--paper-2);
+}
+
+.rd-btn--ghost:hover,
+.rd-btn--ghost:focus-visible {
+  background: var(--paper-2);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.btn:hover::before,
+.btn:focus-visible::before,
+.rd-btn:hover::before,
+.rd-btn:focus-visible::before {
+  transform: scaleX(1);
+}
+
+/* Text links thicken their own underline instead of only changing colour. */
+.link,
+.article-reader__body a {
+  text-decoration-thickness: 1px;
+  transition: text-decoration-thickness 0.15s ease, color 0.15s ease;
+}
+
+.link:hover,
+.article-reader__body a:hover,
+.link:focus-visible,
+.article-reader__body a:focus-visible {
+  text-decoration-thickness: 2px;
+}
+
+/* ==========================================================================
+   24. Print: home only
    Home prints on paper: no grain layer, no ink flood. Scoped to .rd-home and
    the home header/footer, so /projects and the journal keep the default print
    output untouched.

@@ -17,7 +17,11 @@ export default defineConfig({
       adapter: adapter({
         pages: 'build',
         assets: 'build',
-        fallback: '404.html',
+        // Not 404.html: this route is prerendered as a real page, and
+        // adapter-static would overwrite it with the SPA shell. nginx answers
+        // unknown paths from 404.html with status 404 (see nginx.conf), so the
+        // shell only exists for a client-side route that misses.
+        fallback: 'spa-fallback.html',
         precompress: false,
         strict: true,
       }),

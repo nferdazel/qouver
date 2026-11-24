@@ -17,7 +17,7 @@
 
   <section class="page-head container">
     <div class="page-head__meta">
-      <a href="/projects" class="link">← Projects</a>
+      <a href="/projects" class="link link--back">← Projects</a>
       <span class="label">Case Study</span>
     </div>
     <h1 class="page-title">{project.name}</h1>
@@ -72,15 +72,18 @@
     <div class="editorial mt-3">
       <div class="editorial__label">03 / Decisions</div>
       <div>
-        <h2 class="h3">Key Decisions & Trade-Offs</h2>
-        <div class="decision-list mt-2">
-          {#each cs.decisions as decision}
-            <div class="decision-item">
-              <h4 class="decision-item__heading">{decision.heading}</h4>
+        <h2 class="h3">Key Decisions &amp; Trade-Offs</h2>
+        <ol class="case-decisions mt-2">
+          {#each cs.decisions as decision, i}
+            <li class="case-decision-item">
+              <span class="case-decision-item__num" aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <h3 class="case-decision-item__title">{decision.heading}</h3>
               <p class="body">{decision.explanation}</p>
-            </div>
+            </li>
           {/each}
-        </div>
+        </ol>
       </div>
     </div>
 
@@ -96,7 +99,7 @@
   <section class="page-head container">
     <h1 class="page-title">Case study not found.</h1>
     <div class="mt-3">
-      <a href="/projects" class="link">← All projects</a>
+      <a href="/projects" class="link link--back">← All projects</a>
     </div>
   </section>
 {/if}
