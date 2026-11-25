@@ -38,7 +38,7 @@
       </p>
       <h2 class="h3 mt-3">Authoritative Engines &amp; Static-First Web</h2>
       <p class="body mt-2">
-        Business logic and calculations belong on deterministic backend servers. The web tier stays zero-JS, static, and lightning fast.
+        Business logic and calculations belong on deterministic backend servers. The web tier is prerendered and static: HTML first, with a small hydration bundle for the parts that need it.
       </p>
       <h2 class="h3 mt-3">Document Everything &amp; Share Knowledge</h2>
       <p class="body mt-2">

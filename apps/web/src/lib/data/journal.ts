@@ -10,12 +10,24 @@ export interface JournalArticle {
   codeSnippet?: string;
 }
 
-export const journalArticles: JournalArticle[] = [
+// Reading time is derived, not typed by hand: a hand-written "6 min read" next
+// to three short paragraphs is a claim the page cannot back up. 200 words a
+// minute, rounded to the nearest minute, never below one.
+export function readingTime(paragraphs: string[]): string {
+  const words = paragraphs.join(' ').trim().split(/\s+/).filter(Boolean).length;
+  return `${Math.max(1, Math.round(words / 200))} min read`;
+}
+
+type ArticleInput = Omit<JournalArticle, 'readTime'>;
+
+// The slug `zero-js-static-jaspr` is kept because it is a live URL. The article
+// under it describes what this site actually does: prerendered HTML plus a
+// hydration bundle, not a zero-JavaScript Jaspr build, which never existed here.
+const articles: ArticleInput[] = [
   {
     slug: 'authoritative-go-simulations',
     title: 'Authoritative World Tick Simulation Engines in Go',
     date: '2026-09-08',
-    readTime: '6 min read',
     category: 'Architecture',
     summary:
       "Why client-side calculated state always diverges, and how we built Skyward's deterministic server tick engine in standard library Go.",
@@ -42,33 +54,27 @@ func (s *TickEngine) Start(ctx context.Context) {
   },
   {
     slug: 'zero-js-static-jaspr',
-    title: 'Zero-JS Static Web: Why We Rebuilt Qouver with Jaspr',
+    title: 'Static First: How This Site Ships HTML Before JavaScript',
     date: '2026-08-18',
-    readTime: '4 min read',
     category: 'Web Craft',
     summary:
-      'Migrating from heavy SPA frameworks to Jaspr static mode: a 0-JS runtime, pre-rendered HTML, and server-baked SEO.',
+      'Every route is prerendered at build time with adapter-static, then hydrated by a small SvelteKit bundle. What that buys, and what it costs.',
     quote:
-      'A corporate home page does not need 3MB of hydration scripts to render text and images. Pure static HTML delivers instant paint and zero fragile dependencies.',
-    codeSnippet: `// Server prerendering in Jaspr static mode
-void main() {
-  runApp(Document(
-    title: 'Qouver',
-    head: [/* static SEO baked here */],
-    body: App(),
-  ));
-}`,
+      'Prerendering removes the server from the request path. It does not remove the browser from the page, and pretending otherwise is the part that fails.',
+    codeSnippet: `// apps/web/src/routes/+layout.ts
+export const prerender = true;
+export const ssr = true;
+export const trailingSlash = 'never';`,
     paragraphs: [
-      'In August 2026, we audited our web stack. Many modern sites ship megabytes of client JavaScript just to present static editorial text and project catalogues.',
-      'By migrating to Jaspr in static mode, every route is prerendered to pure HTML at build time. There is no client bundle, no hydration delay, and zero client JS execution.',
-      'The result is a site with no client JavaScript bundle at all: pre-rendered HTML served directly via Caddy, with self-hosted fonts and images making up the rest of the payload.',
+      'This site is built with SvelteKit and adapter-static. Every route is rendered to HTML at build time, and Caddy serves that tree as plain files: no web server renders a page at request time, and there is no loader state to wait for before the text arrives.',
+      'What ships alongside the HTML is honest to measure. A home page load fetches about twenty module scripts, roughly 55 KiB gzipped and 119 KiB decoded. An article page is about 50 KiB gzipped. Those bytes buy client-side navigation, the contact form, and the mail link, and they are fetched after the HTML has already painted.',
+      'The trade-off is worth naming. With JavaScript blocked, the text, the links and the case studies still work, because the markup is real. The contact form does not, because it posts through fetch. That is the boundary this site accepts: content readable without script, interaction requiring it.',
     ],
   },
   {
     slug: 'systems-prospector-manifesto',
     title: 'The Systems Prospector: Finding Latent Value in Latent Problems',
     date: '2026-08-15',
-    readTime: '5 min read',
     category: 'Philosophy',
     summary:
       'Valuable systems hide in overlooked places: sports scoring, compliance documents, and simulation loops. Building for endurance over hype.',
@@ -81,3 +87,8 @@ void main() {
     ],
   },
 ];
+
+export const journalArticles: JournalArticle[] = articles.map((article) => ({
+  ...article,
+  readTime: readingTime(article.paragraphs),
+}));

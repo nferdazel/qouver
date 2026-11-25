@@ -89,12 +89,22 @@ const HOVER_TARGETS = [
   { route: '/', sel: '.rd-mailto' },
   { route: '/projects', sel: '.rd-ledger-row' },
   { route: '/projects', sel: '.rd-btn--ghost' },
+  // The contact rows put their class on the anchor itself, not on a wrapper.
+  // A selector waiting for a descendant there matched nothing, which is how the
+  // contact links shipped with no hover at all.
+  { route: '/contact', sel: 'a.contact-row__value' },
+  { route: '/contact', sel: 'a.contact-row__value >> nth=1' },
 ];
 
 for (const { route, sel } of HOVER_TARGETS) {
   test(`hover is more than a colour swap: ${route} ${sel}`, async ({ page }) => {
     await page.goto(route);
     const target = page.locator(sel).first();
+    // Scroll first. Playwright's hover() scrolls the element into view, and a
+    // viewport-relative box then moves on its own, which a diff reads as a
+    // state change even when nothing changed. Document-relative boxes and a
+    // pre-scrolled element keep the measurement about the element.
+    await target.scrollIntoViewIfNeeded();
     const measure = () =>
       target.evaluate((el) => {
         const snap = (node: Element, tag: string) => {
@@ -106,9 +116,9 @@ for (const { route, sel } of HOVER_TARGETS) {
             [`${tag}.color`]: s.color,
             [`${tag}.bg`]: s.backgroundColor,
             [`${tag}.backgroundSize`]: s.backgroundSize,
+            [`${tag}.borderColor`]: s.borderBottomColor,
             [`${tag}.textDecorationThickness`]: s.textDecorationThickness,
             [`${tag}.transform`]: s.transform,
-            [`${tag}.borderColor`]: s.borderBottomColor,
             [`${tag}.before.transform`]: before.transform,
             [`${tag}.before.backgroundSize`]: before.backgroundSize,
             [`${tag}.before.opacity`]: before.opacity,
@@ -116,8 +126,8 @@ for (const { route, sel } of HOVER_TARGETS) {
             [`${tag}.after.backgroundSize`]: after.backgroundSize,
             [`${tag}.w`]: Math.round(r.width * 100) / 100,
             [`${tag}.h`]: Math.round(r.height * 100) / 100,
-            [`${tag}.x`]: Math.round(r.x * 100) / 100,
-            [`${tag}.y`]: Math.round(r.y * 100) / 100,
+            [`${tag}.x`]: Math.round((r.x + window.scrollX) * 100) / 100,
+            [`${tag}.y`]: Math.round((r.y + window.scrollY) * 100) / 100,
           };
         };
         const out = { ...snap(el, 'self') };

@@ -7,8 +7,9 @@
 
 Qouver is the personal site of a systems-minded builder. It presents a curated
 set of projects, an about page describing the person behind the work, and a
-contact page. The site is fully static: every page is prerendered HTML with
-zero client-side JavaScript.
+contact page. Every route is prerendered to HTML at build time, so the content
+is readable without JavaScript; client-side navigation and the contact form are
+hydrated by a small SvelteKit bundle.
 
 ## Key pages
 
@@ -19,7 +20,7 @@ zero client-side JavaScript.
 
 ## Highlights
 
-- Fully static site built with the Jaspr framework (Dart), prerendered at build time.
+- Prerendered static site built with SvelteKit and adapter-static, served as plain files by Caddy.
 - Every page ships title + meta description + canonical + OpenGraph tags, server-side.
-- No client-side JavaScript: content is readable by any crawler without rendering.
+- Content is readable by any crawler without rendering: the HTML is real, not a shell.
 - sitemap.xml is generated at build time from the route list.

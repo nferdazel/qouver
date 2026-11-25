@@ -31,7 +31,7 @@ flowchart LR
     end
 
     subgraph Presentation ["Static Presentation Layer"]
-        StaticFiles["/srv/qouver/apps/qouver/web\n(SvelteKit Zero-JS SSG • HTML • CSS • Fonts)"]
+        StaticFiles["/srv/qouver/apps/qouver/web\n(SvelteKit SSG • HTML • CSS • Fonts)"]
     end
 
     subgraph Services ["Application Runtime (Podman Quadlet)"]
@@ -53,9 +53,10 @@ flowchart LR
 
 - Decoupled backend and frontend: presentation and logic are cleanly split across `apps/web` and
   `apps/api`.
-- Zero-JS static pre-rendering: every marketing, project showcase, journal and status route
-  pre-renders to static HTML at build time with `@sveltejs/adapter-static`, for performance, SEO and
-  resilience.
+- Static-first pre-rendering: every marketing, project showcase, journal and status route
+  pre-renders to static HTML at build time with `@sveltejs/adapter-static`. The HTML is complete
+  before any script runs; a small SvelteKit bundle then hydrates client-side navigation and the
+  contact form.
 - Contract-driven development: the OpenAPI 3.1 specification in `packages/contracts` is the single
   source of truth, and compiles into typed clients for the web app and for consumers.
 - Native efficiency: the backend runs on compiled Nim using the evented [Mummy](https://github.com/guzba/mummy)
