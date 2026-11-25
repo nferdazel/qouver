@@ -1,38 +1,36 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import QMark from '$lib/components/QMark.svelte';
-  import MailLink from '$lib/components/MailLink.svelte';
-  import {
-    siteName,
-    githubOrgUrl,
-    githubMaintainerUrl,
-  } from '$lib/site.js';
 
   let { children } = $props();
 
-  const isHome = $derived(page.url.pathname === '/');
+  const links = [
+    { href: '/projects', label: 'Projects' },
+    { href: '/journal', label: 'Journal' },
+    { href: '/about', label: 'About' },
+    { href: '/contact', label: 'Contact' },
+  ];
 
   function isActive(path: string): boolean {
     const current = page.url.pathname;
-    return current === path || (path !== '/' && current.startsWith(`${path}/`));
+    return current === path || current.startsWith(`${path}/`);
   }
 </script>
 
 <a class="skip-link" href="#main">Skip to content</a>
 
-<header class="site-header" class:site-header--home={isHome}>
-  <div class="container site-header__inner">
+<header class="site-header topbar">
+  <div class="wrap topbar__in">
     <a href="/" class="brand" aria-label="Qouver, home">
-      <QMark size="30" class="brand__mark" accentDot={true} />
-      <span class="brand__word">Qouver</span>
+      <span class="brand__dot" aria-hidden="true"></span>
+      <b>Qouver</b>
     </a>
-    <nav class="nav rd-nav" aria-label="Primary">
-      <a href="/projects" class="nav__link {isActive('/projects') ? 'nav__link--active' : ''}">Projects</a>
-      <a href="/journal" class="nav__link {isActive('/journal') ? 'nav__link--active' : ''}">Journal</a>
-      <a href="/about" class="nav__link {isActive('/about') ? 'nav__link--active' : ''}">About</a>
-      <a href="/contact" class="nav__link {isActive('/contact') ? 'nav__link--active' : ''}">Contact</a>
+    <nav class="nav" aria-label="Primary">
+      {#each links as link}
+        <a href={link.href} aria-current={isActive(link.href) ? 'page' : undefined}>
+          {link.label}
+        </a>
+      {/each}
     </nav>
-    <MailLink class="rd-masthead__mail" />
   </div>
 </header>
 
@@ -40,50 +38,10 @@
   {@render children()}
 </main>
 
-<footer class="site-footer" class:site-footer--home={isHome}>
-  <div class="container">
-    <div class="rd-footer__top">
-      <div>
-        <a href="/" class="rd-footer__brand" aria-label="Qouver, home">
-          <QMark size="28" class="brand__mark" accentDot={true} />
-          <span class="brand__word">{siteName}</span>
-        </a>
-        <p class="rd-footer__tagline">
-          Built from what others leave behind. A home for systems and ideas.
-        </p>
-      </div>
-      <div class="rd-footer__cols">
-        <div class="rd-footer__col">
-          <p class="rd-footer__col-title">Index</p>
-          <ul>
-            <li><a href="/projects">Projects</a></li>
-            <li><a href="/journal">Journal</a></li>
-            <li><a href="/about">About</a></li>
-            <li><a href="/contact">Contact</a></li>
-          </ul>
-        </div>
-        <div class="rd-footer__col">
-          <p class="rd-footer__col-title">Contact</p>
-          <ul>
-            <li><MailLink /></li>
-            <li>
-              <a href={githubOrgUrl} target="_blank" rel="noopener">
-                github.com/qouver
-              </a>
-            </li>
-            <li>
-              <a href={githubMaintainerUrl} target="_blank" rel="noopener">
-                github.com/nferdazel
-              </a>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
-    <div class="rd-footer__bottom">
-      <span>© 2026 Qouver</span>
-      <span>Set in Fraunces & Archivo / Built with SvelteKit & Nim</span>
-      <span>qouver.com</span>
-    </div>
+<footer class="site-footer foot">
+  <div class="wrap foot__in">
+    <span>Qouver / qouver.com</span>
+    <span>Built from what others leave behind</span>
+    <a href="#main">Top</a>
   </div>
 </footer>

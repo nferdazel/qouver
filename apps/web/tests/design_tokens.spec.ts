@@ -58,6 +58,9 @@ for (const route of ROUTES) {
   });
 }
 
+// Uppercase text at label scale (the caption and label roles) must carry
+// positive tracking. Display and heading type is deliberately tightened per
+// size by the Design C type system, so those sizes are out of this check.
 test('no letter-spacing/tracking regression: every uppercase label has tracking', async ({ page }) => {
   await page.goto('/');
   const bad = await page.evaluate(() => {
@@ -67,6 +70,7 @@ test('no letter-spacing/tracking regression: every uppercase label has tracking'
       const text = (el.textContent || '').trim();
       if (!text || el.children.length) continue;
       if (s.textTransform !== 'uppercase') continue;
+      if (parseFloat(s.fontSize) > 15.5) continue;
       const ls = parseFloat(s.letterSpacing);
       if (!Number.isFinite(ls) || ls <= 0) {
         out.push({ text: text.slice(0, 30), ls: s.letterSpacing });
@@ -80,15 +84,15 @@ test('no letter-spacing/tracking regression: every uppercase label has tracking'
 // One campaign: every primary interactive element changes something other than
 // just colour on hover. Captures a rest/hover diff of geometry and ink.
 const HOVER_TARGETS = [
-  { route: '/', sel: '.rd-ledger-row' },
-  { route: '/', sel: '.rd-ledger-row__name a' },
+  { route: '/', sel: '.row .nm a' },
   { route: '/', sel: '.brand' },
-  { route: '/', sel: '.nav__link' },
-  { route: '/', sel: '.rd-btn' },
-  { route: '/', sel: '.rd-link-line' },
-  { route: '/', sel: '.rd-mailto' },
-  { route: '/projects', sel: '.rd-ledger-row' },
-  { route: '/projects', sel: '.rd-btn--ghost' },
+  { route: '/', sel: '.nav a' },
+  { route: '/', sel: '.hero__cta .btn' },
+  { route: '/', sel: '.hero__side a' },
+  { route: '/', sel: '.journal__main h2 a' },
+  { route: '/', sel: '.ji' },
+  { route: '/projects', sel: '.row .nm a' },
+  { route: '/projects', sel: '.pagehead__side a' },
   // The contact rows put their class on the anchor itself, not on a wrapper.
   // A selector waiting for a descendant there matched nothing, which is how the
   // contact links shipped with no hover at all.
@@ -215,7 +219,7 @@ for (const route of ROUTES) {
 }
 
 // Spacing: every gap/padding/margin in the stylesheet resolves to a token on
-// the 4px ladder (2px half-step allowed). Rendered px is the wrong probe here
+// the 4/8/12/16/24/32/48/64/96/128 ladder. Rendered px is the wrong probe here
 // because clamp() with a vw term lands between steps at any single viewport.
 test('spacing literals are all on the token ladder', async () => {
   const fs = await import('node:fs/promises');
@@ -223,46 +227,53 @@ test('spacing literals are all on the token ladder', async () => {
   const cssPath = path.resolve('static/styles.css');
   const css = await fs.readFile(cssPath, 'utf8');
 
-  const TOKENS = new Set([
-    '0', '0.125rem', '0.25rem', '0.375rem', '0.5rem', '0.75rem', '1rem', '1.25rem',
-    '1.5rem', '1.75rem', '2rem', '2.5rem', '3rem', '3.5rem', '4rem', '5rem', '6rem', '7rem',
-  ]);
+  const LADDER = new Set([0, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128]);
 
   const offenders = [];
   for (const decl of css.matchAll(/^\s*(gap|row-gap|column-gap|padding|padding-block|padding-inline|padding-top|padding-bottom|padding-left|padding-right|margin|margin-block|margin-inline|margin-top|margin-bottom|margin-left|margin-right):\s*([^;]+);/gm)) {
     const [, prop, raw] = decl;
     if (!prop || !raw) continue;
     const value = raw.trim();
-    // clamp() and calc() are rhythm primitives; em values follow their parent type.
-    if (/clamp\(|calc\(/.test(value) || /em\b/.test(value)) continue;
+    // clamp() and calc() are rhythm primitives.
+    if (/clamp\(|calc\(/.test(value)) continue;
     for (const part of value.split(/\s+/)) {
-      if (!part || TOKENS.has(part)) continue;
-      if (/^var\(--s-/.test(part) || /^var\(--pad-/.test(part) || /^var\(--gut/.test(part)) continue;
-      if (/^\d+%$/.test(part) || part === 'auto') continue;
-      offenders.push(`${prop}: ${value}`);
-      break;
+      if (!part) continue;
+      if (/^var\(--(s\d{1,2}|pad)\)$/.test(part)) continue;
+      if (part === 'auto' || part === '0' || /^\d+%$/.test(part)) continue;
+      const px = part.endsWith('rem')
+        ? parseFloat(part) * 16
+        : part.endsWith('px')
+          ? parseFloat(part)
+          : NaN;
+      if (!LADDER.has(px)) {
+        offenders.push(`${prop}: ${value}`);
+        break;
+      }
     }
   }
   expect(offenders, JSON.stringify(offenders.slice(0, 12))).toEqual([]);
 });
 
-// The token definitions themselves: type floor and the ladder.
-test('type tokens have a 14px floor and no orphans', async () => {
+// The token definitions themselves: the 14px floor, and no more than the eight
+// roles the direction declares.
+test('type tokens have a 14px floor and at most eight steps', async () => {
   const fs = await import('node:fs/promises');
   const path = await import('node:path');
   const css = await fs.readFile(path.resolve('static/styles.css'), 'utf8');
   const rootStart = css.indexOf(':root {');
-  const rootEnd = css.indexOf('/* ------', rootStart);
+  const rootEnd = css.indexOf('\n}', rootStart);
   const root = css.slice(rootStart, rootEnd === -1 ? undefined : rootEnd);
-  const steps = [...root.matchAll(/--step[\w-]*:\s*([^;]+);/g)].flatMap((m) =>
+  const steps = [...root.matchAll(/--t-[\w-]+:\s*([^;]+);/g)].flatMap((m) =>
     m[1] ? [m[1].trim()] : [],
   );
   expect(steps.length).toBeGreaterThan(3);
+  expect(steps.length).toBeLessThanOrEqual(8);
   for (const step of steps) {
-    if (step.startsWith('clamp(')) continue;
-    const rem = parseFloat(step);
-    const px = /rem/.test(step) ? rem * 16 : rem;
-    expect(px, `--step ${step} is under the 14px floor`).toBeGreaterThanOrEqual(13.99);
+    // A clamp() role is bounded by its first argument, the minimum it can render at.
+    const base = step.startsWith('clamp(') ? step.slice(6).split(',')[0]!.trim() : step;
+    const pf = parseFloat(base);
+    const px = /rem/.test(base) ? pf * 16 : pf;
+    expect(px, `--t token ${step} is under the 14px floor`).toBeGreaterThanOrEqual(13.99);
   }
 });
 
@@ -279,7 +290,7 @@ for (const { label, width, height } of [
     await page.setViewportSize({ width, height });
     for (const route of ROUTES) {
       await page.goto(route);
-      const row = page.locator('.rd-ledger-row').first();
+      const row = page.locator('.row').first();
       if (await row.count()) {
         await row.hover();
         await page.waitForTimeout(280);

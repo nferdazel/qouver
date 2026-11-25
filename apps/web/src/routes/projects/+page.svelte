@@ -3,10 +3,7 @@
   import ProjectRow from '$lib/components/ProjectRow.svelte';
   import MailLink from '$lib/components/MailLink.svelte';
   import { projects } from '$lib/data/projects.js';
-  import {
-    githubOrgUrl,
-    githubMaintainerUrl,
-  } from '$lib/site.js';
+  import { githubOrgUrl, githubMaintainerUrl } from '$lib/site.js';
 </script>
 
 <SeoHead
@@ -15,48 +12,46 @@
   path="/projects"
 />
 
-<section class="rd-page-head">
-  <div class="container">
-    <div class="rd-page-head__meta">
-      <p class="rd-kicker">Catalogue / four systems</p>
+<section class="pagehead">
+  <div class="wrap pagehead__grid">
+    <div class="pagehead__main">
+      <p class="kicker">Catalogue / {projects.length} systems</p>
+      <h1 class="pagehead__title">Production Systems</h1>
     </div>
-    <h1 class="rd-page-title">Production Systems</h1>
-    <p class="rd-page-head__lead">
-      Live, in production, or archived, each one earned its place. Built to solve
-      real problems with disciplined software craft.
-    </p>
-    <p class="rd-page-head__contact">
-      Working on something similar? <MailLink />
-    </p>
+    <div class="pagehead__side">
+      <p>
+        Live, in production, or archived, each one earned its place. Built to solve
+        real problems with disciplined software craft.
+      </p>
+      <p>Working on something similar? <MailLink /></p>
+    </div>
   </div>
 </section>
 
-<section class="rd-catalogue">
-  <div class="container">
-    <div class="rd-ledger">
-      <div class="rd-ledger__labels" aria-hidden="true">
-        <span>Index</span>
+<section class="sec sec--airy">
+  <div class="wrap">
+    <div class="board">
+      <div class="board__labels" aria-hidden="true">
+        <span>No.</span>
         <span>System</span>
+        <span>Domain</span>
         <span>Stack</span>
-        <span>Open</span>
+        <span>Status</span>
+        <span>Record</span>
       </div>
-
       {#each projects as project}
-        <ProjectRow {project} level={2} showFocus />
+        <ProjectRow {project} showFocus />
       {/each}
     </div>
   </div>
 </section>
 
-<section class="rd-contact-band" id="contact">
-  <div class="container rd-contact-band__grid">
-    <div>
-      <h2>Questions, a project idea, or something worth talking about.</h2>
-      <p class="rd-contact-band__copy">Direct is fine.</p>
-    </div>
-    <div>
-      <MailLink class="rd-mailto" />
-      <div class="rd-contact-band__links">
+<section class="band" id="contact">
+  <div class="wrap band__grid">
+    <h2>Questions, a project idea, or something worth talking about.</h2>
+    <div class="band__side">
+      <MailLink class="band__mail" />
+      <div class="band__links">
         <a href={githubOrgUrl} target="_blank" rel="noopener">github.com/qouver</a>
         <a href={githubMaintainerUrl} target="_blank" rel="noopener">github.com/nferdazel</a>
       </div>

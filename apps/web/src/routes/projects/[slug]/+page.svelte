@@ -1,105 +1,142 @@
 <script lang="ts">
   import SeoHead from '$lib/components/SeoHead.svelte';
   import ProjectStatusBadge from '$lib/components/ProjectStatusBadge.svelte';
+  import RecordDiagram from '$lib/components/RecordDiagram.svelte';
   import type { PageData } from './$types.js';
 
   let { data }: { data: PageData } = $props();
   const project = $derived(data.project);
   const cs = $derived(project.caseStudy);
+
+  const siteLabel = $derived(project.urlLabel === 'API' ? 'API' : 'Live site');
 </script>
 
 {#if cs}
   <SeoHead
-    title="{project.name} · Technical Case Study · Qouver"
+    title="{project.name} · System record {project.index} · Qouver"
     description={cs.overview}
     path="/projects/{project.slug}"
+    ogType="article"
   />
 
-  <section class="page-head container">
-    <div class="page-head__meta">
-      <a href="/projects" class="link link--back">← Projects</a>
-      <span class="label">Case Study</span>
-    </div>
-    <h1 class="page-title">{project.name}</h1>
-    <p class="lead mt-2">{cs.title}</p>
-    <div class="project-detail__meta-bar mt-3">
-      <div class="project-detail__meta-item">
-        <span class="label">Category</span>
-        <span class="project-detail__meta-val">{project.category}</span>
+  <section class="rec">
+    <div class="wrap wrap--doc">
+      <div class="rec__top">
+        <a class="kicker" href="/projects">Register / back to the system list</a>
+        <span class="kicker kicker--dim">System record {project.index}</span>
       </div>
-      <div class="project-detail__meta-item">
-        <span class="label">Status</span>
-        <ProjectStatusBadge status={project.status} />
-      </div>
-      <div class="project-detail__meta-item">
-        <span class="label">Stack</span>
-        <span class="project-detail__meta-val">{project.stack}</span>
-      </div>
-      {#if project.url}
-        <div class="project-detail__meta-item">
-          <span class="label">Live Site</span>
-          <a
-            href={project.url}
-            target="_blank"
-            rel="noopener"
-            class="link"
-          >
-            {project.urlLabel ?? 'VISIT'} ↗
-          </a>
+      <h1>{project.name}</h1>
+      <p class="stand">{cs.overview}</p>
+      <dl class="rec__meta">
+        <div>
+          <dt>Status</dt>
+          <dd><ProjectStatusBadge status={project.status} /></dd>
         </div>
-      {/if}
+        <div>
+          <dt>Domain</dt>
+          <dd>{project.category}</dd>
+        </div>
+        <div>
+          <dt>Stack</dt>
+          <dd>{project.stack}</dd>
+        </div>
+        {#if project.url}
+          <div>
+            <dt>{siteLabel}</dt>
+            <dd>
+              <a href={project.url} target="_blank" rel="noopener">{project.url.replace('https://', '')}</a>
+            </dd>
+          </div>
+        {/if}
+      </dl>
     </div>
   </section>
 
-  <section class="section container">
-    <div class="editorial">
-      <div class="editorial__label">01 / Context</div>
-      <div>
-        <h2 class="h3">Overview & Problem</h2>
-        <p class="body mt-2">{cs.overview}</p>
-        <p class="body">{cs.problem}</p>
+  <div class="wrap wrap--doc doc">
+    <aside class="rail">
+      <div class="rail__in">
+        <span class="kicker">On this record</span>
+        <nav aria-label="Sections">
+          <a href="#context"><span class="n">01</span> Context</a>
+          <a href="#system"><span class="n">02</span> System</a>
+          <a href="#decisions"><span class="n">03</span> Decisions</a>
+          <a href="#retro"><span class="n">04</span> Retrospective</a>
+        </nav>
+        {#if project.status === 'Backend'}
+          <p>
+            Status is Backend, not Live. Qouver operates the API; the mobile app is
+            community-maintained. The record keeps that distinction.
+          </p>
+        {/if}
       </div>
-    </div>
+    </aside>
 
-    <div class="editorial mt-3">
-      <div class="editorial__label">02 / System</div>
-      <div>
-        <h2 class="h3">Architecture</h2>
-        <p class="body mt-2">{cs.architecture}</p>
-      </div>
-    </div>
+    <div class="text">
+      <section class="part" id="context">
+        <div class="part__label"><span class="n">01</span><span class="kicker">Context</span></div>
+        <h2>Overview &amp; Problem</h2>
+        <p>{cs.overview}</p>
+        <p>{cs.problem}</p>
+      </section>
 
-    <div class="editorial mt-3">
-      <div class="editorial__label">03 / Decisions</div>
-      <div>
-        <h2 class="h3">Key Decisions &amp; Trade-Offs</h2>
-        <ol class="case-decisions mt-2">
+      <section class="part" id="system">
+        <div class="part__label"><span class="n">02</span><span class="kicker">System</span></div>
+        <h2>Architecture</h2>
+        <p>{cs.architecture}</p>
+        {#if cs.diagram}
+          <RecordDiagram diagram={cs.diagram} index={1} />
+        {/if}
+      </section>
+
+      <section class="part" id="decisions">
+        <div class="part__label"><span class="n">03</span><span class="kicker">Decisions</span></div>
+        <h2>Key Decisions &amp; Trade-Offs</h2>
+        <ol class="decisions">
           {#each cs.decisions as decision, i}
-            <li class="case-decision-item">
-              <span class="case-decision-item__num" aria-hidden="true">
-                {String(i + 1).padStart(2, '0')}
-              </span>
-              <h3 class="case-decision-item__title">{decision.heading}</h3>
-              <p class="body">{decision.explanation}</p>
+            <li>
+              <span class="n">{String(i + 1).padStart(2, '0')}</span>
+              <div>
+                <h3>{decision.heading}</h3>
+                <p>{decision.explanation}</p>
+              </div>
             </li>
           {/each}
         </ol>
-      </div>
-    </div>
+      </section>
 
-    <div class="editorial mt-3">
-      <div class="editorial__label">04 / Retrospective</div>
-      <div>
-        <h2 class="h3">Takeaways</h2>
-        <p class="body mt-2">{cs.takeaways}</p>
+      <section class="part" id="retro">
+        <div class="part__label"><span class="n">04</span><span class="kicker">Retrospective</span></div>
+        <h2>Takeaways</h2>
+        <p>{cs.takeaways}</p>
+      </section>
+    </div>
+  </div>
+
+  <div class="end">
+    <div class="wrap wrap--doc end__in">
+      <span class="kicker">End of record {project.index}</span>
+      <a href="/projects">Back to the register</a>
+    </div>
+  </div>
+
+  <section class="band" id="contact">
+    <div class="wrap wrap--doc band__grid">
+      <h2>Questions, a project idea, or something worth talking about.</h2>
+      <div class="band__side">
+        <a class="band__mail" href="/contact">hello@qouver.com</a>
+        <div class="band__links">
+          <a href="https://github.com/qouver" target="_blank" rel="noopener">github.com/qouver</a>
+          <a href="https://github.com/nferdazel" target="_blank" rel="noopener">github.com/nferdazel</a>
+        </div>
       </div>
     </div>
   </section>
 {:else}
-  <section class="page-head container">
-    <h1 class="page-title">Case study not found.</h1>
-    <div class="mt-3">
-      <a href="/projects" class="link link--back">← All projects</a>
+  <section class="notfound wrap">
+    <h1 class="notfound__title">Case study not found.</h1>
+    <p class="notfound__body">Nothing is filed under this system record.</p>
+    <div class="notfound__links">
+      <a class="btn" href="/projects">Back to the register</a>
     </div>
   </section>
 {/if}

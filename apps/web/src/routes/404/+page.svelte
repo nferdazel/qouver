@@ -8,25 +8,15 @@
   path="/404"
 />
 
-<section class="page-head container">
-  <div class="page-head__meta">
-    <span class="label">Error 404</span>
-  </div>
-  <h1 class="page-title">Page not found.</h1>
-  <p class="lead mt-2">
-    The page you are looking for does not exist, or was prospected away.
+<section class="notfound wrap">
+  <p class="kicker">Error 404</p>
+  <h1 class="notfound__title">Page not found.</h1>
+  <p class="notfound__body">
+    Nothing is filed under this address. The four systems and the journal are still where
+    they were.
   </p>
-</section>
-
-<section class="section container">
-  <div class="rd-404">
-    <p class="body">
-      Nothing is filed under this address. The four systems and the journal are
-      still where they were.
-    </p>
-    <div class="rd-404__links">
-      <a href="/" class="rd-btn">Back to home</a>
-      <a href="/projects" class="rd-link-line">Browse the systems</a>
-    </div>
+  <div class="notfound__links">
+    <a class="btn" href="/">Back to home</a>
+    <a class="btn btn--ghost" href="/projects">Browse the systems</a>
   </div>
 </section>
