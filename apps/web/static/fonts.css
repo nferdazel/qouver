@@ -1,20 +1,22 @@
-/* Self-hosted variable fonts (latin subset, woff2).
-   Fraunces: display serif. Archivo: structure, body, labels.
-   Downloaded from fonts.gstatic.com; see scripts/build.sh for provenance. */
+/* Self-hosted fonts (latin subset, woff2). No third-party stylesheet is loaded.
+   Anton Regular 400: display. Static, single weight (version 27).
+   Public Sans: body, navigation and labels. Variable, weight axis 100-900 (version 21).
+   Both are SIL Open Font License 1.1 and were downloaded from fonts.gstatic.com
+   by the Direction C implementation (2026-11-25). The latin subset is enough for
+   the site's copy; a language that needs latin-ext must add that file explicitly. */
 
 @font-face {
-  font-family: 'Fraunces';
+  font-family: 'Anton';
   font-style: normal;
-  font-weight: 400 700;
-  font-optical-sizing: auto;
+  font-weight: 400;
   font-display: swap;
-  src: url(fonts/fraunces-var.woff2) format('woff2');
+  src: url(fonts/anton-latin.woff2) format('woff2');
 }
 
 @font-face {
-  font-family: 'Archivo';
+  font-family: 'Public Sans';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 100 900;
   font-display: swap;
-  src: url(fonts/archivo-var.woff2) format('woff2');
+  src: url(fonts/public-sans-var.woff2) format('woff2');
 }
