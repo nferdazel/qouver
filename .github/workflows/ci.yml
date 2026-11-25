@@ -91,7 +91,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
-        run: pnpm --filter @qouver/web exec playwright install --with-deps chromium
+        run: pnpm --filter @qouver/web exec playwright install --with-deps chromium firefox webkit
 
       - name: Run verification suite (./task ci)
         run: ./task ci

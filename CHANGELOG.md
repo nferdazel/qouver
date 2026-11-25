@@ -12,6 +12,11 @@ those commits.
 
 ## [Unreleased]
 
+### Changed
+
+- The e2e and a11y suite runs in Chromium, Firefox and WebKit: `apps/web/playwright.config.ts`
+  declares the three projects and CI installs all three browsers.
+
 ## [0.1.0] - 2026-11-20
 
 ### Changed
