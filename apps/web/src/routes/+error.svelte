@@ -9,16 +9,14 @@
   path="/404"
 />
 
-<section class="page-head container">
-  <div class="page-head__meta">
-    <span class="label">Error {page.status}</span>
-  </div>
-  <h1 class="page-title">Page not found.</h1>
-  <p class="lead mt-2">
+<section class="notfound wrap">
+  <p class="kicker">Error {page.status}</p>
+  <h1 class="notfound__title">Page not found.</h1>
+  <p class="notfound__body">
     The page you are looking for does not exist, or was prospected away.
   </p>
-</section>
-
-<section class="section container">
-  <a href="/" class="link link--back">Back to home</a>
+  <div class="notfound__links">
+    <a class="btn" href="/">Back to home</a>
+    <a class="btn btn--ghost" href="/projects">Browse the systems</a>
+  </div>
 </section>

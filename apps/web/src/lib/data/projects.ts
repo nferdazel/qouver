@@ -3,6 +3,18 @@ export interface CaseStudyDecision {
   explanation: string;
 }
 
+// A record only carries a diagram when the architecture paragraph names the
+// request path; drawing one from a stack list would invent the protocols
+// between the blocks.
+export interface CaseDiagram {
+  title: string;
+  description: string;
+  blocks: Array<{ label: string; value: string; note: string; accent?: boolean }>;
+  connectors: string[];
+  footer?: string;
+  caption: string;
+}
+
 export interface CaseStudy {
   title: string;
   overview: string;
@@ -10,6 +22,7 @@ export interface CaseStudy {
   architecture: string;
   decisions: CaseStudyDecision[];
   takeaways: string;
+  diagram?: CaseDiagram;
 }
 
 export type ProjectStatus = 'Live' | 'Backend' | 'Archived';
@@ -113,6 +126,20 @@ export const projects: Project[] = [
       ],
       takeaways:
         'Standard-library Go code paired with a disciplined mathematical rating model delivers high production reliability with near-zero server resource usage.',
+      diagram: {
+        title: 'Majadu request path',
+        description:
+          'React 19 PWA sends a request to the Go API over HTTPS, the Go API reads and writes PostgreSQL 18 over SQL, with one schema per community.',
+        blocks: [
+          { label: 'Client', value: 'React 19 PWA', note: 'Community app' },
+          { label: 'API / Go 1.26', value: 'net/http + pgx/v5', note: 'No framework', accent: true },
+          { label: 'Database', value: 'PostgreSQL 18', note: 'One schema per community' },
+        ],
+        connectors: ['HTTPS', 'SQL'],
+        footer: 'Runs in rootless Podman',
+        caption:
+          'The request path as the record describes it: community PWA to Go API over HTTPS, API to PostgreSQL over SQL, one schema per community.',
+      },
     },
   },
   {

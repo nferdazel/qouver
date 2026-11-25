@@ -14,9 +14,11 @@
     githubMaintainerUrl,
   } from '$lib/site.js';
 
-  const latestNote = journalArticles[0];
+  const latest = journalArticles[0];
+  const older = journalArticles.slice(1, 3);
   const liveCount = projects.filter((project) => project.status !== 'Archived').length;
   const archivedCount = projects.length - liveCount;
+  const pad = (n: number) => String(n).padStart(2, '0');
 
   const schemaJson = JSON.stringify([
     {
@@ -27,85 +29,90 @@
       logo: `${siteUrl}/assets/q-mark.svg`,
       email: contactEmail,
       description: siteDescription,
-      sameAs: [
-        'https://github.com/qouver',
-        'https://github.com/nferdazel',
-      ],
+      sameAs: ['https://github.com/qouver', 'https://github.com/nferdazel'],
     },
     {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
       name: 'Qouver',
       url: siteUrl,
-      description:
-        'A home for systems and ideas. Find value. Build systems. Share knowledge.',
+      description: 'A home for systems and ideas. Find value. Build systems. Share knowledge.',
     },
   ]);
 </script>
 
-<SeoHead
-  title="{siteName} · {siteTagline}"
-  description={siteDescription}
-  path="/"
-/>
+<SeoHead title="{siteName} · {siteTagline}" description={siteDescription} path="/" />
 
 <svelte:head>
   {@html `<script type="application/ld+json">${schemaJson}</script>`}
 </svelte:head>
 
-<div class="rd-home">
-<section class="rd-hero">
-  <div class="container">
-    <div class="rd-hero__grid">
-      <h1 class="rd-hero__title">
-        A home for <span class="rd-hero__mark">systems<svg
-            class="rd-hero__mark-stroke"
-            viewBox="0 0 300 16"
-            preserveAspectRatio="none"
-            aria-hidden="true"><path d="M3 10.4C58 4.2 132 14.2 205 7.6 244 4 276 6.4 297 8.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" opacity=".9"/><path d="M16 14.2C74 9.4 150 16 226 11.2" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity=".45"/></svg></span>
-        and ideas.
-      </h1>
-
-      <div class="rd-hero__aside">
-        <p class="rd-hero__deck">
-          Qouver finds overlooked opportunities, turns them into useful systems,
-          and shares what it learns.
-        </p>
-        <div class="rd-hero__actions">
-          <a class="rd-btn" href="#systems">Read the systems</a>
-          <MailLink class="rd-link-line" />
-        </div>
-      </div>
+<section class="hero">
+  <div class="wrap hero__grid">
+    <div class="hero__main">
+      <h1>A home for systems and ideas.</h1>
     </div>
-
-    <div class="rd-hero__motto">
-      <p>Four systems, all of them running for someone real.</p>
-      <span>qouver.com</span>
+    <div class="hero__side">
+      <p>
+        Qouver finds overlooked opportunities, turns them into useful systems, and
+        shares what it learns.
+      </p>
+      <MailLink />
+    </div>
+    <p class="hero__deck">
+      {projects.length} systems, built and operated. {liveCount} run for someone today.
+      {archivedCount} are archived and still documented.
+    </p>
+    <div class="hero__cta">
+      <a class="btn" href="#register">See the register</a>
+      <a class="btn btn--ghost" href="/contact">Start a conversation</a>
     </div>
   </div>
 </section>
 
-<section class="rd-ledger-section" id="systems">
-  <div class="container">
-    <div class="rd-sec-head">
-      <div>
-        <p class="rd-kicker">Production systems</p>
-        <h2>Four systems, built and operated.</h2>
+<div class="statusbar">
+  <div class="wrap statusbar__in">
+    <div class="statusbar__cell">
+      <span class="n">{pad(projects.length)}</span>
+      <span class="t">Systems on record</span>
+    </div>
+    <div class="statusbar__cell">
+      <span class="n">{pad(liveCount)}</span>
+      <span class="t">In service</span>
+    </div>
+    <div class="statusbar__cell">
+      <span class="n">{pad(archivedCount)}</span>
+      <span class="t">Archived</span>
+    </div>
+    <div class="statusbar__cell">
+      <span class="n">{latest?.date ?? 'None'}</span>
+      <span class="t">Latest journal entry</span>
+    </div>
+  </div>
+</div>
+
+<section class="sec sec--airy" id="register">
+  <div class="wrap">
+    <div class="sec__head">
+      <div class="sec__head__main">
+        <p class="kicker">System register</p>
+        <h2>Built, run, written down</h2>
       </div>
-      <p class="rd-sec-head__note">
-        {liveCount} run in production today; {archivedCount} are archived. Status
-        is marked on every entry, and live systems open from here.
+      <p>
+        Status is stated on every row. Operating systems open from the register;
+        archived ones keep their record.
       </p>
     </div>
 
-    <div class="rd-ledger">
-      <div class="rd-ledger__labels" aria-hidden="true">
-        <span>Index</span>
+    <div class="board">
+      <div class="board__labels" aria-hidden="true">
+        <span>No.</span>
         <span>System</span>
+        <span>Domain</span>
         <span>Stack</span>
-        <span>Open</span>
+        <span>Status</span>
+        <span>Record</span>
       </div>
-
       {#each projects as project}
         <ProjectRow {project} />
       {/each}
@@ -113,91 +120,74 @@
   </div>
 </section>
 
-<section class="rd-method" aria-label="How Qouver works">
-  <div class="container rd-method__grid">
-    <div class="rd-method__item">
-      <span class="rd-method__num">01</span>
-      <h3>Find value in plain sight.</h3>
-      <p>
-        Valuable things often sit unindexed or overlooked: the gap in a community,
-        the pattern in a dataset, the tool nobody bothered to build.
-      </p>
+<section class="method" id="method" aria-label="How Qouver works">
+  <div class="wrap">
+    <div class="method__head">
+      <h2>Working method</h2>
+      <p>Three steps, in this order. Every system on the register came out of them.</p>
     </div>
-    <div class="rd-method__item">
-      <span class="rd-method__num">02</span>
-      <h3>Build real production systems.</h3>
-      <p>
-        Not prototypes. Not pitch decks. Software running in production, handling
-        real workload, and earning its place.
-      </p>
-    </div>
-    <div class="rd-method__item">
-      <span class="rd-method__num">03</span>
-      <h3>Document every lesson.</h3>
-      <p>
-        What is built gets documented. Architecture post-mortems and open technical
-        essays mean the next problem starts with context.
-      </p>
+    <div class="method__grid">
+      <div class="method__item">
+        <span class="n">01</span>
+        <h3>Find value in plain sight</h3>
+        <p>
+          Valuable things often sit unindexed or overlooked: the gap in a community,
+          the pattern in a dataset, the tool nobody bothered to build.
+        </p>
+      </div>
+      <div class="method__item">
+        <span class="n">02</span>
+        <h3>Build real production systems</h3>
+        <p>
+          Not prototypes. Not pitch decks. Software running in production, handling
+          real workload, and earning its place.
+        </p>
+      </div>
+      <div class="method__item">
+        <span class="n">03</span>
+        <h3>Document every lesson</h3>
+        <p>
+          What is built gets documented. Architecture post-mortems and open technical
+          essays mean the next problem starts with context.
+        </p>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="rd-notes" id="notes">
-  <div class="container rd-notes__grid">
-    <p class="rd-kicker">Latest note</p>
-    {#if latestNote}
-      <article class="rd-notes__main">
-        <p class="rd-notes__meta">
-          {latestNote.date} / {latestNote.category} / {latestNote.readTime}
+<section class="sec sec--airy" id="journal">
+  <div class="wrap journal">
+    {#if latest}
+      <article class="journal__main">
+        <p class="kicker">Journal / latest entry</p>
+        <h2><a href="/journal/{latest.slug}">{latest.title}</a></h2>
+        <p class="journal__meta">{latest.date} · {latest.category} · {latest.readTime}</p>
+        <p>{latest.summary}</p>
+        <p class="journal__more">
+          <a class="btn btn--ghost" href="/journal">All notes</a>
         </p>
-        <h2 class="rd-notes__title">
-          <a href="/journal/{latestNote.slug}">{latestNote.title}</a>
-        </h2>
-        <p class="rd-notes__summary">{latestNote.summary}</p>
-        <a class="rd-link-line" href="/journal">All notes</a>
       </article>
     {/if}
-  </div>
-</section>
-
-<section class="rd-manifesto" id="about">
-  <div class="container">
-    <svg
-      class="rd-manifesto__mark"
-      viewBox="0 0 54 44"
-      aria-hidden="true"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2.2"
-      stroke-linecap="round"
-    >
-      <path d="M8 34c-3-9 1-18 12-24" />
-      <path d="M30 34c-3-9 1-18 12-24" />
-    </svg>
-    <p class="rd-manifesto__quote">
-      Find what others walk past. <em>Build something useful from it.</em> Leave notes
-      for whoever comes next.
-    </p>
-    <div class="rd-manifesto__row">
-      <span class="rd-kicker rd-kicker--on-ink">Operational manifesto</span>
-      <a class="rd-link-line rd-link-line--light" href="/about">Read the story</a>
+    <div class="journal__list">
+      {#each older as article}
+        <a class="ji" href="/journal/{article.slug}">
+          <span class="d">{article.date} · {article.category}</span>
+          <span class="t">{article.title}</span>
+        </a>
+      {/each}
     </div>
   </div>
 </section>
 
-<section class="rd-contact-band" id="contact">
-  <div class="container rd-contact-band__grid">
-    <div>
-      <h2>Questions, a project idea, or something worth talking about.</h2>
-      <p class="rd-contact-band__copy">Direct is fine.</p>
-    </div>
-    <div>
-      <MailLink class="rd-mailto" />
-      <div class="rd-contact-band__links">
+<section class="band" id="contact">
+  <div class="wrap band__grid">
+    <h2>Questions, a project idea, or something worth talking about.</h2>
+    <div class="band__side">
+      <MailLink class="band__mail" />
+      <div class="band__links">
         <a href={githubOrgUrl} target="_blank" rel="noopener">github.com/qouver</a>
         <a href={githubMaintainerUrl} target="_blank" rel="noopener">github.com/nferdazel</a>
       </div>
     </div>
   </div>
 </section>
-</div>
