@@ -1164,22 +1164,21 @@ h3,
   color: var(--ink-3);
 }
 
+/* The class sits on the anchor itself (contact/+page.svelte, MailLink), not on a
+   wrapper, so hover and focus have to target this element, not a descendant. The
+   accent line is drawn by the shared rule at the end of the file, over this one. */
 .contact-row__value {
   font-family: var(--font-display);
   font-weight: 500;
   font-size: var(--step-2);
   line-height: 1.2;
-}
-
-.contact-row__value a {
   color: var(--ink);
   text-decoration: none;
   border-bottom: 2px solid var(--rule);
 }
 
-.contact-row__value a:hover {
+.contact-row__value:hover {
   color: var(--accent);
-  border-color: var(--accent);
 }
 
 .contact-row__note {
@@ -1220,14 +1219,10 @@ h3,
 
 .manifesto .contact-row__value {
   color: var(--paper);
-}
-
-.manifesto .contact-row__value a {
-  color: var(--paper);
   border-bottom-color: rgba(201, 196, 184, 0.4);
 }
 
-.manifesto .contact-row__value a:hover {
+.manifesto .contact-row__value:hover {
   color: var(--signal);
   border-color: var(--signal);
 }
@@ -2513,7 +2508,7 @@ h3,
 .link-action,
 .rd-link-line,
 .rd-mailto,
-.contact-row__value a {
+.contact-row__value {
   background-image: linear-gradient(var(--accent), var(--accent));
   background-repeat: no-repeat;
   background-origin: border-box;
@@ -2526,11 +2521,11 @@ h3,
 .link-action:hover,
 .rd-link-line:hover,
 .rd-mailto:hover,
-.contact-row__value a:hover,
+.contact-row__value:hover,
 .link-action:focus-visible,
 .rd-link-line:focus-visible,
 .rd-mailto:focus-visible,
-.contact-row__value a:focus-visible {
+.contact-row__value:focus-visible {
   background-size: 100% 2px;
   border-color: var(--rule);
 }
@@ -2539,7 +2534,7 @@ h3,
 .link-action--light,
 .rd-link-line--light,
 .rd-home .rd-mailto,
-.manifesto .contact-row__value a {
+.manifesto .contact-row__value {
   background-image: linear-gradient(currentColor, currentColor);
 }
 
@@ -2568,19 +2563,23 @@ h3,
   background: var(--ink);
 }
 
+/* A ghost button keeps its outline instead of inverting into a block, because a
+   hairline turning solid is a different object, not a state. It gets the same
+   left-to-right wipe as every other button, in the soft paper tint rather than
+   ink, so the hover is one gesture across the site and moves no box. */
 .btn--ghost::before,
 .rd-btn--ghost::before {
-  content: none;
+  background: var(--paper-2);
 }
 
 .btn--ghost:hover,
 .btn--ghost:focus-visible {
-  background: var(--paper-2);
+  background: transparent;
 }
 
 .rd-btn--ghost:hover,
 .rd-btn--ghost:focus-visible {
-  background: var(--paper-2);
+  background: transparent;
   color: var(--accent);
   border-color: var(--accent);
 }
