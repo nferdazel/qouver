@@ -66,7 +66,7 @@ test('contact form handles submission lifecycle', async ({ page }) => {
     });
   });
 
-  await nameInput.fill('Sachiel Tester');
+  await nameInput.fill('Fredi Tester');
   await emailInput.fill('tester@example.com');
   await subjectInput.fill('Test dispatch subject');
   await messageInput.fill('This is a test message to verify the form submission lifecycle.');

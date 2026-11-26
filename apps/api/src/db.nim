@@ -116,67 +116,43 @@ proc migrate*(db: Database) =
   """)
 
 proc seedMemory*(db: Database) =
-  ## Default initial seeds loaded into memory
+  ## Default initial seeds loaded into memory.
+  ## Order is the register order: operating records first, archived last. The
+  ## index is rendered as the "No." column, so it moves with the order.
   db.inMemoryProjects = @[
     Project(
       index: "01",
-      slug: "skyward",
-      name: "Skyward",
-      category: "Simulation",
-      tagline: "Airline tycoon simulation.",
-      description: "Run your own airline: build a fleet, open routes, and grow an economy that keeps moving while you're away. The whole world runs on a server-side simulation engine, so your device just plays it and everything stays fair and consistent. Live now at skyward.qouver.com.",
-      focus: @["Simulation", "Strategy", "Systems design"],
-      status: psLive,
-      stack: "Flutter · Go · Postgres",
-      url: "https://skyward.qouver.com",
-      urlLabel: "VISIT",
-      caseStudy: (block:
-        var cs = new(CaseStudy)
-        cs.title = "Server-Side Tick Simulation Engine & Authoritative State"
-        cs.overview = "Skyward is an airline management game where global economy, route calculations, fuel burn, and passenger demand operate continuously on a backend tick worker in Go."
-        cs.problem = "Client-side calculated simulations suffer from device clock tampering, battery drain during offline calculation, and state divergence across mobile and desktop clients."
-        cs.architecture = "An authoritative Go 1.22+ backend executes a scheduled world tick loop, persisting state in PostgreSQL 18. The Flutter client acts as a pure, reactive viewer rendering streamed server snapshots."
-        cs.decisions = @[
-          CaseStudyDecision(heading: "Zero client simulation logic", explanation: "The Flutter client contains no financial or flight trajectory formulas. All flight paths, fuel consumption, and market yields are calculated strictly on the backend."),
-          CaseStudyDecision(heading: "Deterministic world tick loop", explanation: "World ticks execute at fixed server intervals. When a player logs in after days away, the backend processes past tick windows deterministically without melting client memory."),
-          CaseStudyDecision(heading: "ACID transaction isolation", explanation: "All airline financial operations use strict PostgreSQL database transactions to prevent double-spending or route duplication under concurrent player actions.")
-        ]
-        cs.takeaways = "Moving simulation authority entirely to Go backend workers guarantees 100% fair play, zero client-side cheat vectors, and instant synchronization between Web and Desktop clients."
-        cs)
-    ),
-    Project(
-      index: "02",
       slug: "majadu",
       name: "Majadu Tools",
       category: "Community systems",
       tagline: "Systems that keep a community running.",
-      description: "The backend that keeps a badminton community running: court scheduling, live scoring, tournaments, and skill ratings that carry across seasons. Qouver builds and operates the Go API behind it, in production today. The mobile app is community-maintained.",
+      description: "The backend that keeps a badminton community running: court scheduling, live scoring, tournaments, and a points board that rewards showing up. Qouver builds and operates the Nim API behind it, in production today.",
       focus: @["Scheduling", "Live scoring", "Ratings", "Community growth"],
       status: psBackend,
-      stack: "Go · Postgres · OpenAPI",
+      stack: "Nim · Postgres · OpenAPI",
       url: "https://api.qouver.com/majadu",
       urlLabel: "API",
       caseStudy: (block:
         var cs = new(CaseStudy)
-        cs.title = "Glicko-1 Rating Engine & Frameworkless Go API"
-        cs.overview = "Majadu powers local sports session operations: balanced doubles matchups, live court scoring, tournament brackets, and cross-season skill rating tracking."
+        cs.title = "Rolling Points Board & Contract-First Nim API"
+        cs.overview = "Majadu powers local sports session operations: balanced doubles matchups, live court scoring, tournament brackets, and a rolling points board."
         cs.problem = "Casual sports sessions suffer from subjective player seeding, manual paper scorekeeping, and network drops during live matches in sports halls with weak cellular coverage."
-        cs.architecture = "A monorepo with a React 19 PWA frontend and a zero-dependency Go 1.26 backend API using PostgreSQL 18 with schema-based multi-tenancy."
+        cs.architecture = "A Nim 2.4 API served by Mummy over HTTP and WebSocket, backed by PostgreSQL 18 and 61 migrations. One database holds every community, and row-level security guards every community-owned table. This record covers the API and the data behind it."
         cs.decisions = @[
-          CaseStudyDecision(heading: "Frameworkless Go backend", explanation: "Built using Go standard library net/http and pgx/v5. Sub-millisecond response times and instant cold starts inside rootless Podman containers."),
-          CaseStudyDecision(heading: "Glicko-1 rating with confidence decay", explanation: "Replaced raw win/loss tallies with a custom Glicko-1 rating engine (Glicko-1-lite) that factors in victory margin and increases rating deviation when players skip seasons."),
-          CaseStudyDecision(heading: "Schema-isolated multi-tenancy", explanation: "Community databases use PostgreSQL search paths per seasonal domain rather than row-level tenant IDs, simplifying backup and data isolation.")
+          CaseStudyDecision(heading: "Contract-first Nim API", explanation: "Routes are generated from the 76-operation OpenAPI definition and run on Mummy over HTTP and WebSocket with db_connector. Clients compile from the same contract, so there is no framework layer to hand-maintain."),
+          CaseStudyDecision(heading: "Rolling points, not an absolute rating", explanation: "Standings come from the best 10 entries in a rolling 12-week window. A game is weighted by its margin and by an opponent tier multiplier clamped between 0.5 and 1.5. Glicko was retired with the v1 API."),
+          CaseStudyDecision(heading: "Tenancy enforced in the database", explanation: "Every community-owned row carries community_id, and row-level security fails closed when the tenant setting is missing. There is no schema per community to keep in sync.")
         ]
-        cs.takeaways = "Standard-library Go code paired with a disciplined mathematical rating model delivers high production reliability with near-zero server resource usage."
+        cs.takeaways = "A contract-first Nim service and tenancy the database enforces keep one API serving many communities without a framework layer or a schema per club."
         cs)
     ),
     Project(
-      index: "03",
+      index: "02",
       slug: "sds",
       name: "SDS Management",
       category: "Compliance",
       tagline: "Chemical safety data management.",
-      description: "A compliance tool that keeps chemical safety data sheets current and auditable: versioned documents, hazard pictograms, and clean PDF exports. In production for a real workplace.",
+      description: "A compliance tool that keeps chemical safety data sheets current and auditable: a searchable register, hazard pictograms, and clean PDF exports. In production for a real workplace.",
       focus: @["Compliance", "Documentation", "Workflow"],
       status: psLive,
       stack: "Vue · Go · Postgres",
@@ -184,16 +160,42 @@ proc seedMemory*(db: Database) =
       urlLabel: "VISIT",
       caseStudy: (block:
         var cs = new(CaseStudy)
-        cs.title = "Audit-Ready Document Versioning & Server PDF Pipeline"
-        cs.overview = "Workplace compliance management system for chemical Safety Data Sheets (SDS/MSDS): versioned hazard documentation, pictogram matrix, and automated PDF export pipeline."
-        cs.problem = "Industrial chemical compliance demands immutable document versioning, exact GHS hazard pictogram mapping, and immediate PDF availability for workplace safety audits."
-        cs.architecture = "Vue 3 + TypeScript single-page application frontend paired with a Go REST API backend and a headless Chromium PDF rendering service running inside Podman containers."
+        cs.title = "Audit-Ready Safety Records & Server PDF Pipeline"
+        cs.overview = "Workplace compliance management system for chemical Safety Data Sheets (SDS/MSDS): a searchable chemical register, a pictogram matrix, and an automated PDF export pipeline."
+        cs.problem = "Industrial chemical compliance demands exact GHS hazard pictogram mapping, a dated record of every edit, and immediate PDF availability for workplace safety audits."
+        cs.architecture = "A Vue 3 + TypeScript single-page application on a Go REST API and PostgreSQL, with headless Chromium rendering PDFs inside the API container and a cache keyed by template hash."
         cs.decisions = @[
-          CaseStudyDecision(heading: "Headless Chromium PDF export", explanation: "Server-side Chromium rendering guarantees 100% pixel-identical PDF exports across all browsers and devices for safety inspection audits."),
-          CaseStudyDecision(heading: "Immutable document versioning", explanation: "Updates to safety data sheets never overwrite existing records. Every safety revision increments an immutable version index with complete audit trails."),
-          CaseStudyDecision(heading: "GHS Pictogram Matrix", explanation: "Chemical hazards map directly to GHS pictograms rendered as inline SVGs for instant visual identification during emergency chemical lookups.")
+          CaseStudyDecision(heading: "Headless Chromium PDF export", explanation: "Chromium renders safety sheets to PDF inside the API container, and the result is cached by template hash. One renderer serves every browser and device."),
+          CaseStudyDecision(heading: "One record per chemical per year", explanation: "A unique key on chemical and year keeps one record per chemical. Edits update it in place, and every create, update, delete and copy-year is written to the activity log with the old and new values."),
+          CaseStudyDecision(heading: "GHS pictogram matrix", explanation: "Hazards map to pictograms stored as images (PNG, JPEG, GIF, WebP), composited server-side and embedded in the PDF as data URIs for instant visual identification.")
         ]
-        cs.takeaways = "Server-side document rendering guarantees regulatory compliance fidelity across all audit devices and print media."
+        cs.takeaways = "One stored record and one renderer keep the sheet identical on every device, and the activity log keeps the history an audit asks for."
+        cs)
+    ),
+    Project(
+      index: "03",
+      slug: "skyward",
+      name: "Skyward",
+      category: "Simulation",
+      tagline: "Airline tycoon simulation.",
+      description: "Run your own airline: build a fleet, open routes, and grow an economy that keeps moving while you're away. The whole world runs on a server-side simulation engine, so your device just plays it and everything stays fair and consistent.",
+      focus: @["Simulation", "Strategy", "Systems design"],
+      status: psArchived,
+      stack: "Flutter · Go · Postgres",
+      url: "",
+      urlLabel: "VISIT",
+      caseStudy: (block:
+        var cs = new(CaseStudy)
+        cs.title = "Server-Side Tick Simulation Engine & Authoritative State"
+        cs.overview = "Skyward is an airline management game where global economy, route calculations, fuel burn, and passenger demand ran continuously on a backend tick worker in Go."
+        cs.problem = "Client-side calculated simulations suffer from device clock tampering, battery drain during offline calculation, and state divergence across mobile and desktop clients."
+        cs.architecture = "An authoritative Go 1.22+ backend executes a scheduled world tick loop, persisting state in PostgreSQL 18. The Flutter client (Web & Desktop) acts as a pure, reactive viewer rendering streamed server snapshots."
+        cs.decisions = @[
+          CaseStudyDecision(heading: "Zero client simulation logic", explanation: "The Flutter client contains no financial or flight trajectory formulas. All flight paths, fuel consumption, and market yields are calculated strictly on the backend."),
+          CaseStudyDecision(heading: "Deterministic world tick loop", explanation: "World ticks execute at fixed server intervals. When a player logs in after days away, the backend processes past tick windows deterministically without melting client memory."),
+          CaseStudyDecision(heading: "ACID transaction isolation", explanation: "All airline financial operations use strict PostgreSQL database transactions to prevent double-spending or route duplication under concurrent player actions.")
+        ]
+        cs.takeaways = "Moving simulation authority entirely to backend workers removed the client as a cheat vector and kept Web and Desktop clients in sync."
         cs)
     ),
     Project(
@@ -216,7 +218,7 @@ proc seedMemory*(db: Database) =
         cs.architecture = "Flutter frontend client paired with Supabase / PostgreSQL backend, featuring a custom rating algorithm weighing win margins and inactivity decay."
         cs.decisions = @[
           CaseStudyDecision(heading: "Inactivity decay penalty", explanation: "Rankings automatically decayed when players stopped competing, preventing inactive players from occupying top leaderboard positions indefinitely."),
-          CaseStudyDecision(heading: "Retirement & algorithm migration", explanation: "When Majadu was established, M-DEF was retired and its core rating algorithms were extracted and rewritten in Go for Majadu API.")
+          CaseStudyDecision(heading: "Retirement & algorithm migration", explanation: "When Majadu was established, M-DEF was retired. Its rating ideas informed Majadu's first API; the current Majadu points model replaced them.")
         ]
         cs.takeaways = "Retiring early standalone experiments in favor of unified backend APIs keeps system maintenance low while preserving core algorithm IP."
         cs)
@@ -235,7 +237,7 @@ proc seedMemory*(db: Database) =
       paragraphs: @[
         "When building Skyward, an airline tycoon simulation, the initial temptation was to calculate flight progression and market yields on the client. But client-side calculation suffers from device clock tampering, battery drain during offline calculation, and state divergence across mobile and desktop apps.",
         "To solve this, we moved all mathematical authority to a deterministic backend tick worker in Go. The Flutter client acts purely as a reactive viewer rendering server snapshots.",
-        "By decoupling calculation from presentation, the world tick loop runs continuously in production on PostgreSQL transactions without relying on any client JavaScript or client state hacks."
+        "By decoupling calculation from presentation, the world tick loop ran continuously in production on PostgreSQL transactions, without relying on any client JavaScript or client state hacks. It stopped when the game was archived, and the code is no longer deployed."
       ]
     ),
     JournalArticle(
@@ -248,7 +250,7 @@ proc seedMemory*(db: Database) =
       codeSnippet: "// apps/web/src/routes/+layout.ts\nexport const prerender = true;\nexport const ssr = true;\nexport const trailingSlash = 'never';",
       paragraphs: @[
         "This site is built with SvelteKit and adapter-static. Every route is rendered to HTML at build time, and Caddy serves that tree as plain files: no web server renders a page at request time, and there is no loader state to wait for before the text arrives.",
-        "What ships alongside the HTML is honest to measure. A home page load fetches about twenty module scripts, roughly 55 KiB gzipped and 119 KiB decoded. An article page is about 50 KiB gzipped. Those bytes buy client-side navigation, the contact form, and the mail link, and they are fetched after the HTML has already painted.",
+        "What ships alongside the HTML is honest to measure. A home page load fetches twenty module scripts, 46 KiB gzipped and 115 KiB decoded. An article page is 41 KiB gzipped. Those bytes buy client-side navigation, the contact form, and the mail link, and they are fetched after the HTML has already painted.",
         "The trade-off is worth naming. With JavaScript blocked, the text, the links and the case studies still work, because the markup is real. The contact form does not, because it posts through fetch. That is the boundary this site accepts: content readable without script, interaction requiring it."
       ]
     ),
@@ -271,10 +273,14 @@ proc seedMemory*(db: Database) =
   for a in db.inMemoryArticles.mitems:
     a.readTime = readingTime(a.paragraphs)
 
+  # Nothing probes these hosts at runtime, so the list carries only systems whose
+  # target answers, with the date of the last manual check. Latency is 0, which
+  # means "not measured" — an invented millisecond figure is worse than a blank.
+  # Skyward is archived and its host no longer resolves, so it is not listed.
+  const seedCheckedAt = "2026-11-26T00:00:00Z"
   db.inMemorySystems = @[
-    SystemHealth(name: "Skyward", slug: "skyward", targetUrl: "https://skyward.qouver.com", status: ssOnline, lastCheckedAt: now().utc().format("yyyy-MM-dd'T'HH:mm:ss'Z'"), responseTimeMs: 42),
-    SystemHealth(name: "Majadu API", slug: "majadu", targetUrl: "https://api.qouver.com/majadu/healthz", status: ssOnline, lastCheckedAt: now().utc().format("yyyy-MM-dd'T'HH:mm:ss'Z'"), responseTimeMs: 28),
-    SystemHealth(name: "SDS Management", slug: "sds", targetUrl: "https://sds.qouver.com", status: ssOnline, lastCheckedAt: now().utc().format("yyyy-MM-dd'T'HH:mm:ss'Z'"), responseTimeMs: 65)
+    SystemHealth(name: "Majadu API", slug: "majadu", targetUrl: "https://api.qouver.com/majadu/healthz", status: ssOnline, lastCheckedAt: seedCheckedAt, responseTimeMs: 0),
+    SystemHealth(name: "SDS Management", slug: "sds", targetUrl: "https://sds.qouver.com", status: ssOnline, lastCheckedAt: seedCheckedAt, responseTimeMs: 0)
   ]
 
 proc getProjects*(db: Database): seq[Project] =

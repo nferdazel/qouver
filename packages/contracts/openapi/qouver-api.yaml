@@ -94,7 +94,7 @@ paths:
 
   /api/systems/status:
     get:
-      summary: Realtime health status of monitored umbrella systems
+      summary: Status of the umbrella systems, as last checked
       operationId: getSystemsStatus
       responses:
         '200':
@@ -321,6 +321,7 @@ components:
           format: date-time
         responseTimeMs:
           type: integer
+          description: Last measured response time in milliseconds; 0 means not measured.
 
     ContactInquiryRequest:
       type: object

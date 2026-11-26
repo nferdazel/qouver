@@ -14,6 +14,12 @@ those commits.
 
 ### Changed
 
+- Site and API copy now match the repositories: Majadu is a Nim 2.4 API on Mummy, not Go;
+  its rating model is rolling points, not Glicko; SDS edits in place with an activity log;
+  and archived Skyward and M-DEF sit at the bottom of the register.
+- `/api/systems/status` no longer lists Skyward (archived, host does not resolve) and reports
+  latency as 0 (unmeasured) instead of inventing milliseconds.
+- About page credits Fredi, and the README describes the shipped Direction C design system.
 - The e2e and a11y suite runs in Chromium, Firefox and WebKit: `apps/web/playwright.config.ts`
   declares the three projects and CI installs all three browsers.
 

@@ -106,7 +106,7 @@
                   required
                   minlength="2"
                   maxlength="100"
-                  placeholder="Sachiel Ferdazel"
+                  placeholder="Fredi"
                   disabled={status === 'submitting'}
                 />
               </div>
@@ -142,7 +142,7 @@
                 required
                 minlength="2"
                 maxlength="200"
-                placeholder="Architecture inquiry / Skyward backend"
+                placeholder="Architecture inquiry / Majadu API"
                 disabled={status === 'submitting'}
               />
             </div>

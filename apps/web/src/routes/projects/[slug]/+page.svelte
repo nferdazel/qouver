@@ -64,8 +64,8 @@
         </nav>
         {#if project.status === 'Backend'}
           <p>
-            Status is Backend, not Live. Qouver operates the API; the mobile app is
-            community-maintained. The record keeps that distinction.
+            Status is Backend, not Live. Qouver builds and operates the API and the
+            data behind it, and the record stays scoped to that.
           </p>
         {/if}
       </div>

@@ -49,7 +49,7 @@ func (s *TickEngine) Start(ctx context.Context) {
     paragraphs: [
       'When building Skyward, an airline tycoon simulation, the initial temptation was to calculate flight progression and market yields on the client. But client-side calculation suffers from device clock tampering, battery drain during offline calculation, and state divergence across mobile and desktop apps.',
       'To solve this, we moved all mathematical authority to a deterministic backend tick worker in Go. The Flutter client acts purely as a reactive viewer rendering server snapshots.',
-      'By decoupling calculation from presentation, the world tick loop runs continuously in production on PostgreSQL transactions without relying on any client JavaScript or client state hacks.',
+      'By decoupling calculation from presentation, the world tick loop ran continuously in production on PostgreSQL transactions, without relying on any client JavaScript or client state hacks. It stopped when the game was archived, and the code is no longer deployed.',
     ],
   },
   {
@@ -67,7 +67,7 @@ export const ssr = true;
 export const trailingSlash = 'never';`,
     paragraphs: [
       'This site is built with SvelteKit and adapter-static. Every route is rendered to HTML at build time, and Caddy serves that tree as plain files: no web server renders a page at request time, and there is no loader state to wait for before the text arrives.',
-      'What ships alongside the HTML is honest to measure. A home page load fetches about twenty module scripts, roughly 55 KiB gzipped and 119 KiB decoded. An article page is about 50 KiB gzipped. Those bytes buy client-side navigation, the contact form, and the mail link, and they are fetched after the HTML has already painted.',
+      'What ships alongside the HTML is honest to measure. A home page load fetches twenty module scripts, 46 KiB gzipped and 115 KiB decoded. An article page is 41 KiB gzipped. Those bytes buy client-side navigation, the contact form, and the mail link, and they are fetched after the HTML has already painted.',
       'The trade-off is worth naming. With JavaScript blocked, the text, the links and the case studies still work, because the markup is real. The contact form does not, because it posts through fetch. That is the boundary this site accepts: content readable without script, interaction requiring it.',
     ],
   },

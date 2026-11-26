@@ -30,7 +30,7 @@
       <div class="editorial__body">
         <h2>One craftsman working in public</h2>
         <p>
-          Qouver is built and maintained by <strong>Sachiel</strong>,
+          Qouver is built and maintained by <strong>Fredi</strong>,
           <a href="https://github.com/nferdazel" target="_blank" rel="noopener">@nferdazel</a>
           on GitHub. An independent systems builder focusing on tools that solve real
           problems.

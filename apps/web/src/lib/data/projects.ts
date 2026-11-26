@@ -43,9 +43,111 @@ export interface Project {
   caseStudy?: CaseStudy;
 }
 
+// Operating records first, archived records last. `index` is rendered as the
+// "No." column and in the case-study header, so it is renumbered with the order.
 export const projects: Project[] = [
   {
     index: '01',
+    slug: 'majadu',
+    name: 'Majadu Tools',
+    category: 'Community systems',
+    tagline: 'Systems that keep a community running.',
+    description:
+      'The backend that keeps a badminton community running: court scheduling, live scoring, tournaments, and a points board that rewards showing up. Qouver builds and operates the Nim API behind it, in production today.',
+    focus: ['Scheduling', 'Live scoring', 'Ratings', 'Community growth'],
+    status: 'Backend',
+    stack: 'Nim · Postgres · OpenAPI',
+    stackItems: ['Nim', 'Postgres', 'OpenAPI'],
+    url: 'https://api.qouver.com/majadu',
+    urlLabel: 'API',
+    caseStudy: {
+      title: 'Rolling Points Board & Contract-First Nim API',
+      overview:
+        'Majadu powers local sports session operations: balanced doubles matchups, live court scoring, tournament brackets, and a rolling points board.',
+      problem:
+        'Casual sports sessions suffer from subjective player seeding, manual paper scorekeeping, and network drops during live matches in sports halls with weak cellular coverage.',
+      architecture:
+        'A Nim 2.4 API served by Mummy over HTTP and WebSocket, backed by PostgreSQL 18 and 61 migrations. One database holds every community, and row-level security guards every community-owned table. This record covers the API and the data behind it.',
+      decisions: [
+        {
+          heading: 'Contract-first Nim API',
+          explanation:
+            'Routes are generated from the 76-operation OpenAPI definition and run on Mummy over HTTP and WebSocket with db_connector. Clients compile from the same contract, so there is no framework layer to hand-maintain.',
+        },
+        {
+          heading: 'Rolling points, not an absolute rating',
+          explanation:
+            'Standings come from the best 10 entries in a rolling 12-week window. A game is weighted by its margin and by an opponent tier multiplier clamped between 0.5 and 1.5. Glicko was retired with the v1 API.',
+        },
+        {
+          heading: 'Tenancy enforced in the database',
+          explanation:
+            'Every community-owned row carries community_id, and row-level security fails closed when the tenant setting is missing. There is no schema per community to keep in sync.',
+        },
+      ],
+      takeaways:
+        'A contract-first Nim service and tenancy the database enforces keep one API serving many communities without a framework layer or a schema per club.',
+      diagram: {
+        title: 'Majadu request path',
+        description:
+          'A client sends a request to the Nim API over HTTPS; the API reads and writes PostgreSQL 18 over SQL, and every community-owned row is scoped by community_id and row-level security.',
+        blocks: [
+          { label: 'Client', value: 'Club app', note: 'Outside this record' },
+          { label: 'API / Nim 2.4', value: 'Mummy + db_connector', note: 'Routes from the contract', accent: true },
+          { label: 'Database', value: 'PostgreSQL 18', note: 'community_id + RLS' },
+        ],
+        connectors: ['HTTPS', 'SQL'],
+        footer: 'Runs in rootless Podman',
+        caption:
+          'The request path as the record describes it: a club app to the Nim API over HTTPS, the API to PostgreSQL over SQL, with community_id and row-level security.',
+      },
+    },
+  },
+  {
+    index: '02',
+    slug: 'sds',
+    name: 'SDS Management',
+    category: 'Compliance',
+    tagline: 'Chemical safety data management.',
+    description:
+      'A compliance tool that keeps chemical safety data sheets current and auditable: a searchable register, hazard pictograms, and clean PDF exports. In production for a real workplace.',
+    focus: ['Compliance', 'Documentation', 'Workflow'],
+    status: 'Live',
+    stack: 'Vue · Go · Postgres',
+    stackItems: ['Vue', 'Go', 'Postgres'],
+    url: 'https://sds.qouver.com',
+    urlLabel: 'VISIT',
+    caseStudy: {
+      title: 'Audit-Ready Safety Records & Server PDF Pipeline',
+      overview:
+        'Workplace compliance management system for chemical Safety Data Sheets (SDS/MSDS): a searchable chemical register, a pictogram matrix, and an automated PDF export pipeline.',
+      problem:
+        'Industrial chemical compliance demands exact GHS hazard pictogram mapping, a dated record of every edit, and immediate PDF availability for workplace safety audits.',
+      architecture:
+        'A Vue 3 + TypeScript single-page application on a Go REST API and PostgreSQL, with headless Chromium rendering PDFs inside the API container and a cache keyed by template hash.',
+      decisions: [
+        {
+          heading: 'Headless Chromium PDF export',
+          explanation:
+            'Chromium renders safety sheets to PDF inside the API container, and the result is cached by template hash. One renderer serves every browser and device.',
+        },
+        {
+          heading: 'One record per chemical per year',
+          explanation:
+            'A unique key on chemical and year keeps one record per chemical. Edits update it in place, and every create, update, delete and copy-year is written to the activity log with the old and new values.',
+        },
+        {
+          heading: 'GHS pictogram matrix',
+          explanation:
+            'Hazards map to pictograms stored as images (PNG, JPEG, GIF, WebP), composited server-side and embedded in the PDF as data URIs for instant visual identification.',
+        },
+      ],
+      takeaways:
+        'One stored record and one renderer keep the sheet identical on every device, and the activity log keeps the history an audit asks for.',
+    },
+  },
+  {
+    index: '03',
     slug: 'skyward',
     name: 'Skyward',
     category: 'Simulation',
@@ -59,7 +161,7 @@ export const projects: Project[] = [
     caseStudy: {
       title: 'Server-Side Tick Simulation Engine & Authoritative State',
       overview:
-        'Skyward is an airline management game where global economy, route calculations, fuel burn, and passenger demand operate continuously on a backend tick worker in Go.',
+        'Skyward is an airline management game where global economy, route calculations, fuel burn, and passenger demand ran continuously on a backend tick worker in Go.',
       problem:
         'Client-side calculated simulations suffer from device clock tampering, battery drain during offline calculation, and state divergence across mobile and desktop clients.',
       architecture:
@@ -82,107 +184,7 @@ export const projects: Project[] = [
         },
       ],
       takeaways:
-        'Moving simulation authority entirely to Go backend workers guarantees 100% fair play, zero client-side cheat vectors, and instant synchronization between Web and Desktop clients.',
-    },
-  },
-  {
-    index: '02',
-    slug: 'majadu',
-    name: 'Majadu Tools',
-    category: 'Community systems',
-    tagline: 'Systems that keep a community running.',
-    description:
-      'The backend that keeps a badminton community running: court scheduling, live scoring, tournaments, and skill ratings that carry across seasons. Qouver builds and operates the Go API behind it, in production today. The mobile app is community-maintained.',
-    focus: ['Scheduling', 'Live scoring', 'Ratings', 'Community growth'],
-    status: 'Backend',
-    stack: 'Go · Postgres · OpenAPI',
-    stackItems: ['Go', 'Postgres', 'OpenAPI'],
-    url: 'https://api.qouver.com/majadu',
-    urlLabel: 'API',
-    caseStudy: {
-      title: 'Glicko-1 Rating Engine & Frameworkless Go API',
-      overview:
-        'Majadu powers local sports session operations: balanced doubles matchups, live court scoring, tournament brackets, and cross-season skill rating tracking.',
-      problem:
-        'Casual sports sessions suffer from subjective player seeding, manual paper scorekeeping, and network drops during live matches in sports halls with weak cellular coverage.',
-      architecture:
-        'A monorepo with a React 19 PWA frontend and a zero-dependency Go 1.26 backend API using PostgreSQL 18 with schema-based multi-tenancy.',
-      decisions: [
-        {
-          heading: 'Frameworkless Go backend',
-          explanation:
-            'Built using Go standard library net/http and pgx/v5. Sub-millisecond response times and instant cold starts inside rootless Podman containers.',
-        },
-        {
-          heading: 'Glicko-1 rating with confidence decay',
-          explanation:
-            'Replaced raw win/loss tallies with a custom Glicko-1 rating engine (Glicko-1-lite) that factors in victory margin and increases rating deviation when players skip seasons.',
-        },
-        {
-          heading: 'Schema-isolated multi-tenancy',
-          explanation:
-            'Community databases use PostgreSQL search paths per seasonal domain rather than row-level tenant IDs, simplifying backup and data isolation.',
-        },
-      ],
-      takeaways:
-        'Standard-library Go code paired with a disciplined mathematical rating model delivers high production reliability with near-zero server resource usage.',
-      diagram: {
-        title: 'Majadu request path',
-        description:
-          'React 19 PWA sends a request to the Go API over HTTPS, the Go API reads and writes PostgreSQL 18 over SQL, with one schema per community.',
-        blocks: [
-          { label: 'Client', value: 'React 19 PWA', note: 'Community app' },
-          { label: 'API / Go 1.26', value: 'net/http + pgx/v5', note: 'No framework', accent: true },
-          { label: 'Database', value: 'PostgreSQL 18', note: 'One schema per community' },
-        ],
-        connectors: ['HTTPS', 'SQL'],
-        footer: 'Runs in rootless Podman',
-        caption:
-          'The request path as the record describes it: community PWA to Go API over HTTPS, API to PostgreSQL over SQL, one schema per community.',
-      },
-    },
-  },
-  {
-    index: '03',
-    slug: 'sds',
-    name: 'SDS Management',
-    category: 'Compliance',
-    tagline: 'Chemical safety data management.',
-    description:
-      'A compliance tool that keeps chemical safety data sheets current and auditable: versioned documents, hazard pictograms, and clean PDF exports. In production for a real workplace.',
-    focus: ['Compliance', 'Documentation', 'Workflow'],
-    status: 'Live',
-    stack: 'Vue · Go · Postgres',
-    stackItems: ['Vue', 'Go', 'Postgres'],
-    url: 'https://sds.qouver.com',
-    urlLabel: 'VISIT',
-    caseStudy: {
-      title: 'Audit-Ready Document Versioning & Server PDF Pipeline',
-      overview:
-        'Workplace compliance management system for chemical Safety Data Sheets (SDS/MSDS): versioned hazard documentation, pictogram matrix, and automated PDF export pipeline.',
-      problem:
-        'Industrial chemical compliance demands immutable document versioning, exact GHS hazard pictogram mapping, and immediate PDF availability for workplace safety audits.',
-      architecture:
-        'Vue 3 + TypeScript single-page application frontend paired with a Go REST API backend and a headless Chromium PDF rendering service running inside Podman containers.',
-      decisions: [
-        {
-          heading: 'Headless Chromium PDF export',
-          explanation:
-            'Server-side Chromium rendering guarantees 100% pixel-identical PDF exports across all browsers and devices for safety inspection audits.',
-        },
-        {
-          heading: 'Immutable document versioning',
-          explanation:
-            'Updates to safety data sheets never overwrite existing records. Every safety revision increments an immutable version index with complete audit trails.',
-        },
-        {
-          heading: 'GHS Pictogram Matrix',
-          explanation:
-            'Chemical hazards map directly to GHS pictograms rendered as inline SVGs for instant visual identification during emergency chemical lookups.',
-        },
-      ],
-      takeaways:
-        'Server-side document rendering guarantees regulatory compliance fidelity across all audit devices and print media.',
+        'Moving simulation authority entirely to backend workers removed the client as a cheat vector and kept Web and Desktop clients in sync.',
     },
   },
   {
@@ -214,7 +216,7 @@ export const projects: Project[] = [
         {
           heading: 'Retirement & algorithm migration',
           explanation:
-            'When Majadu was established, M-DEF was retired and its core rating algorithms were extracted and rewritten in Go for Majadu API.',
+            "When Majadu was established, M-DEF was retired. Its rating ideas informed Majadu's first API; the current Majadu points model replaced them.",
         },
       ],
       takeaways:

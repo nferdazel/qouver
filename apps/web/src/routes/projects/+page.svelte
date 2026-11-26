@@ -8,7 +8,7 @@
 
 <SeoHead
   title="Projects · Qouver"
-  description="The systems under the Qouver umbrella: Skyward, Majadu Tools, and SDS Management: simulation, community systems, and compliance tools."
+  description="The systems under the Qouver umbrella: Majadu Tools, SDS Management, Skyward and M-DEF: community systems, compliance tools, and a simulation."
   path="/projects"
 />
 

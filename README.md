@@ -5,8 +5,8 @@ Umbrella home for systems and ideas: the official monorepo for [qouver.com](http
 ## What this is
 
 Qouver pairs a high-throughput Nim backend with a pre-rendered SvelteKit presentation layer, styled
-under the bespoke Workshop Broadsheet editorial aesthetic. It carries the marketing site, the project
-showcase, the journal and the status pages, and the API they read from.
+as Direction C, a facility-signage system of condensed display type and register rows. It carries the
+marketing site, the project showcase, the journal and the status pages, and the API they read from.
 
 What it does not do: it is not a CMS. Content lives in the repository as Markdown and JSON, and a
 release publishes it. There is no admin surface and no runtime editing.
@@ -70,20 +70,24 @@ flowchart LR
 | Web | SvelteKit, Svelte 5 runes, TypeScript | see `apps/web/package.json` |
 | Database | PostgreSQL | 18 |
 
-### Workshop Broadsheet design system
+### Direction C design system
 
-The visual identity is modeled on traditional craftsmanship, technical broadsheets and editorial
-typography:
+The site reads like facility signage and an equipment register: condensed display type, black and
+yellow bands that code state, and rows laid out like a departure board. Reading pages drop to a
+quieter sub-system in Public Sans.
 
 | Token | Value | Role |
 |---|---|---|
-| Bone Paper | `#EDEAE3` | Primary page background; warm, tactile parchment substrate |
-| Ink | `#141311` | Primary text and structural borders |
-| Ink Light | `#5C5852` | Secondary captions, metadata, editorial timestamps |
-| Oxide Accent | `#B23A1A` | Industrial terracotta oxide; active highlights and status accents |
-| Border Dark | `#24221E` | High-contrast structural division lines |
-| Display font | `Fraunces` | Self-hosted serif, variable optical size for headlines |
-| Interface font | `Archivo` | Self-hosted grotesque sans-serif, technical body copy |
+| White | `#FFFFFF` | Page background and panels |
+| Ink | `#0A0A0A` | Text, rules, and structural borders |
+| Grey | `#E9E9E6` | Quiet panels and archived rows |
+| Muted | `#4A4A4A` | Secondary captions and metadata |
+| Yellow | `#FFD400` | Status code for the operating state, never decoration |
+| Display font | `Anton` | Self-hosted condensed face for headlines |
+| Interface font | `Public Sans` | Self-hosted variable sans for body copy |
+
+Type is eight roles with nothing below 14px, and spacing comes off the 4/8/12/16/24/32/48/64/96/128
+ladder. Tokens are declared once, in `apps/web/static/styles.css`, and mirrored in `packages/ui`.
 
 ## Repository layout
 
@@ -100,7 +104,7 @@ qouver/
 ├── packages/
 │   ├── contracts/           # OpenAPI 3.1 specification (qouver-api.yaml)
 │   ├── api-client/          # Auto-generated TypeScript client (openapi-fetch)
-│   └── ui/                  # Shared Broadsheet design tokens & constants
+│   └── ui/                  # Shared Direction C design tokens & constants
 ├── shared/
 │   └── kernel/              # Shared types, models, and domain definitions
 ├── deploy/                  # Production deployment artifacts (Quadlets, Dockerfiles, Caddy)

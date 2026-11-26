@@ -10,12 +10,14 @@ suite "Qouver API Domain & Database Tests":
   test "seed projects are loaded correctly":
     let projects = db.getProjects()
     check projects.len == 4
-    check projects[0].slug == "skyward"
-    check projects[0].status == psLive
-    check projects[1].slug == "majadu"
-    check projects[1].status == psBackend
-    check projects[2].slug == "sds"
+    check projects[0].slug == "majadu"
+    check projects[0].status == psBackend
+    check projects[1].slug == "sds"
+    check projects[1].status == psLive
+    check projects[2].slug == "skyward"
+    check projects[2].status == psArchived
     check projects[3].slug == "mdef"
+    check projects[3].status == psArchived
 
   test "get project by slug returns case study":
     let opt = db.getProject("skyward")
@@ -49,11 +51,13 @@ suite "Qouver API Domain & Database Tests":
     check inquiry.email == "alice@example.com"
     check inquiry.status == "received"
 
-  test "systems health returns live systems":
+  test "systems health lists measured targets only":
     let systems = db.getSystemsHealth()
-    check systems.len == 3
-    check systems[0].name == "Skyward"
+    check systems.len == 2
+    check systems[0].name == "Majadu API"
     check systems[0].status == ssOnline
+    for s in systems:
+      check s.responseTimeMs == 0 # 0 means "not measured"; nothing probes the host yet
 
   test "database operations are thread-safe under concurrent access":
     var threads: array[4, Thread[Database]]

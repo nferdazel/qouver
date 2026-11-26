@@ -96,7 +96,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Realtime health status of monitored umbrella systems */
+        /** Status of the umbrella systems, as last checked */
         get: operations["getSystemsStatus"];
         put?: never;
         post?: never;
@@ -200,6 +200,7 @@ export interface components {
             status: "online" | "degraded" | "offline";
             /** Format: date-time */
             lastCheckedAt: string;
+            /** @description Last measured response time in milliseconds; 0 means not measured. */
             responseTimeMs: number;
         };
         ContactInquiryRequest: {
