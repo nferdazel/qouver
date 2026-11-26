@@ -37,7 +37,6 @@
         <span>Domain</span>
         <span>Stack</span>
         <span>Status</span>
-        <span>Record</span>
       </div>
       {#each projects as project}
         <ProjectRow {project} showFocus />

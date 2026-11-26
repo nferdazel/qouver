@@ -454,7 +454,7 @@ select:focus-visible,
 .board__labels,
 .row {
   display: grid;
-  grid-template-columns: 48px minmax(0, 2.4fr) minmax(0, 1.1fr) minmax(0, 1.4fr) 96px 144px;
+  grid-template-columns: 48px minmax(0, 2.4fr) minmax(0, 1.1fr) minmax(0, 1.4fr) 96px;
   gap: var(--s4);
   align-items: center;
 }
@@ -532,37 +532,6 @@ a.row:hover {
 .row .sq {
   font-size: var(--t-caption);
   letter-spacing: 0.02em;
-}
-
-.row .go {
-  font-size: var(--t-label);
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  text-align: right;
-}
-
-.row .go a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: var(--s1);
-}
-
-.row .go a:hover {
-  background: var(--yellow);
-  text-decoration-thickness: 4px;
-}
-
-.row .go em {
-  font-style: normal;
-  color: var(--muted);
-  font-weight: 400;
-  letter-spacing: 0.04em;
-  text-transform: none;
-  font-size: var(--t-caption);
 }
 
 .row .focus {
@@ -1741,12 +1710,6 @@ a.contact-row__value:hover {
     grid-row: 1;
     justify-self: end;
   }
-
-  .row .go {
-    grid-column: 3;
-    grid-row: 2 / span 2;
-    align-self: end;
-  }
 }
 
 @media (max-width: 900px) {
@@ -1889,26 +1852,19 @@ a.contact-row__value:hover {
   }
 
   .row .idx {
-    grid-row: 1 / span 5;
+    grid-row: 1 / span 4;
   }
 
   .row .nm,
   .row .dm,
   .row .sq,
-  .row .st,
-  .row .go {
+  .row .st {
     grid-column: 2;
   }
 
   .row .st {
     grid-row: 4;
     justify-self: start;
-  }
-
-  .row .go {
-    grid-row: 5;
-    text-align: left;
-    align-self: start;
   }
 
   .figure svg {

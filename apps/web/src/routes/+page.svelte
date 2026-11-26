@@ -99,8 +99,8 @@
         <h2>Built, run, written down</h2>
       </div>
       <p>
-        Status is stated on every row. Operating systems open from the register;
-        archived ones keep their record.
+        Status is stated on every row. Every row opens its system record,
+        operating or archived.
       </p>
     </div>
 
@@ -111,7 +111,6 @@
         <span>Domain</span>
         <span>Stack</span>
         <span>Status</span>
-        <span>Record</span>
       </div>
       {#each projects as project}
         <ProjectRow {project} />
