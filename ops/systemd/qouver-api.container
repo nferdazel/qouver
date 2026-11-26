@@ -3,8 +3,13 @@
 [Unit]
 OnFailure=alert@%N.service
 Description=Qouver API (qouver.com, Nim + PostgreSQL)
-After=network-online.target
-Wants=network-online.target
+# network-online.target says the network is up, not that PostgreSQL accepts
+# sessions. Without this ordering the API starts before the database on every
+# boot, logs "Failed to connect to PostgreSQL ... falling back to memory data",
+# and serves from memory until someone restarts it (seen on the 2026-11-26
+# 16:44 reboot: unit came up unhealthy, one manual restart was needed).
+Wants=network-online.target qouver-postgres.service
+After=network-online.target qouver-postgres.service
 [Container]
 Image=localhost/qouver-api:local
 ContainerName=qouver-api
