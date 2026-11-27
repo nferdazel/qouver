@@ -22,8 +22,10 @@ Qouver is the monorepo for qouver.com: a Nim backend in `apps/api`, a pre-render
 | Unit and contract tests | `./task test` | the same |
 | Build binary and pre-render | `./task build` | the same, plus Node |
 | The full gate | `./task ci` | Playwright browsers for the e2e and accessibility suite |
+| The full gate without browsers | `./task ci-fast` | the same, minus Playwright |
 
-`./task ci` is what CI runs, and it is what a pull request must pass before review. A pull request
+`./task ci` is what a pull request must pass before review; CI runs it as two jobs, `./task ci-fast`
+for check/test/build and `./task e2e` for the browser and accessibility suite. A pull request
 that changes `apps/api` must also keep `packages/contracts` and the generated client in step: the
 contract is the source of truth, and a handler that drifts from it fails `./task check`.
 

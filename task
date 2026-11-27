@@ -6,7 +6,8 @@
 #   ./task test        Unit, property, and OpenAPI contract tests
 #   ./task e2e         Playwright e2e tests & axe-core WCAG 2.2 AA audit
 #   ./task build       Build apps/api binary and apps/web static output
-#   ./task ci          Full verification gate (check + test + e2e + build)
+#   ./task ci          Full verification gate (check + test + build + e2e)
+#   ./task ci-fast     Everything but e2e (check + test + build)
 #   ./task gate        golden contract + shell syntax + secret scan + check (<= 90 s)
 #   ./task gate-full   gate + test + build + e2e (the gate before a release)
 #   ./task release [major|minor|patch] [--skip-check] [--push] [--current]
@@ -124,12 +125,23 @@ cmd_ci() {
   log "All gates green"
 }
 
+# Everything `ci` runs except the browser suite. CI splits it this way so a slow
+# Playwright/apt install cannot cancel the Nim and unit-test half of the gate.
+cmd_ci_fast() {
+  log "Starting CI verification gate without e2e"
+  cmd_check
+  cmd_test
+  cmd_build
+  log "All gates green (e2e runs in the e2e job)"
+}
+
 case "${1:-help}" in
   check)  cmd_check ;;
   test)   cmd_test ;;
   e2e)    cmd_e2e ;;
   build)  cmd_build ;;
   ci)     cmd_ci ;;
+  ci-fast) cmd_ci_fast ;;
   # Standard CI/CD v2.0: one gate and one release implementation, shared byte-identically with
   # every other repo. See task.d/gate.sh and task.d/release.sh.
   gate)      shift; exec sh task.d/gate.sh gate "$@" ;;
