@@ -18,6 +18,8 @@ RUN nimble install -y -d
 # compares against after a restart it did not trust.
 ARG GIT_REV=dev
 
+COPY config.nims ./
+COPY vendor/ ./vendor/
 COPY shared/ ./shared/
 COPY apps/api/ ./apps/api/
 
