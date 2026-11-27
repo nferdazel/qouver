@@ -134,6 +134,12 @@ jobs:
       - name: Run e2e & a11y suite (./task e2e)
         run: ./task e2e
 
+      # The CI reporter is `dot`, so the suite log shows a count and no project
+      # names. Print the plan once so the log itself proves all three engines
+      # were collected and ran, not just that 219 tests passed somewhere.
+      - name: List the browser projects
+        run: pnpm --filter @qouver/web exec playwright test --list --reporter=list
+
   security:
     name: Security (gitleaks)
     needs: [preflight]
