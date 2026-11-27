@@ -84,17 +84,55 @@ jobs:
       - name: Install Node workspace dependencies
         run: pnpm install --frozen-lockfile
 
+      # ./task ci-fast is check + unit/contract tests + build, i.e. ./task ci
+      # without the browser suite. On 2026-11-26 the Playwright install spent 14
+      # of the 15 minutes inside apt (`--with-deps`, ~150 packages from a slow
+      # Ubuntu mirror) and cancelled the job before ./task ci had started, so no
+      # Nim check, unit test or build ever ran. The browser work owns its own job
+      # (`e2e`) and the gate requires that job green, so a red e2e still blocks.
+      - name: Run verification suite (./task ci-fast)
+        run: ./task ci-fast
+
+  # The browser suite: system libraries + chromium/firefox/webkit + the e2e and
+  # axe-core a11y run. Kept separate from `verify` so a slow apt download costs
+  # this job instead of the whole gate. `changes` is deliberately not consulted:
+  # a docs-only PR is cheap, a silent e2e skip is not.
+  e2e:
+    name: E2E (chromium, firefox, webkit)
+    needs: [preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 11
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Node workspace dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Cache Playwright browsers
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
 
       - name: Install Playwright browsers
         run: pnpm --filter @qouver/web exec playwright install --with-deps chromium firefox webkit
 
-      - name: Run verification suite (./task ci)
-        run: ./task ci
+      - name: Run e2e & a11y suite (./task e2e)
+        run: ./task e2e
 
   security:
     name: Security (gitleaks)
@@ -348,12 +386,13 @@ jobs:
   gate:
     name: Gate
     if: always()
-    needs: [preflight, verify, security, changes]
+    needs: [preflight, verify, e2e, security, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       R_CONTRACT: ${{ needs.preflight.result }}
       R_VERIFY: ${{ needs.verify.result }}
+      R_E2E: ${{ needs.e2e.result }}
       R_SECURITY: ${{ needs.security.result }}
       R_CHANGES: ${{ needs.changes.result }}
     steps:
@@ -361,7 +400,7 @@ jobs:
         shell: bash
         run: |
           fail=0
-          for r in "$R_CONTRACT" "$R_VERIFY" "$R_SECURITY" "$R_CHANGES"; do
+          for r in "$R_CONTRACT" "$R_VERIFY" "$R_E2E" "$R_SECURITY" "$R_CHANGES"; do
             [ "$r" = "success" ] || { echo "required job: $r"; fail=1; }
           done
           exit "$fail"

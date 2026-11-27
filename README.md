@@ -147,10 +147,13 @@ All developer and CI interaction runs through the portable `./task` entry point:
 ./task check     # static analysis, linting, format verification, OpenAPI contract validation
 ./task test      # unit and contract tests (Nim backend & TypeScript packages)
 ./task build     # compile the Nim release binary and pre-render the SvelteKit site
+./task ci-fast   # check + test + build, no browsers (the CI `verify` job)
 ./task ci        # the complete gate matrix required before merging
 ```
 
-CI runs `./task ci` plus a security job and the shared golden CI/CD contract check.
+CI runs `./task ci-fast` plus a separate job that installs Playwright and runs `./task e2e`, so
+a slow browser install cannot cancel the Nim and unit-test half of the gate. `./task ci` is still
+the one command a laptop runs before a pull request.
 
 ## Deployment
 
