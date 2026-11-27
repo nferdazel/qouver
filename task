@@ -23,7 +23,7 @@ cd "$ROOT"
 
 BUILD="$ROOT/.build"
 BIN="$BUILD/bin"
-NIMPATH="-p:$ROOT/shared -p:$ROOT/apps/api/src"
+NIMPATH="-p:$ROOT/vendor/mummy -p:$ROOT/shared -p:$ROOT/apps/api/src"
 NIMFLAGS="--hints:off --warnings:on $NIMPATH"
 TESTFLAGS="$NIMFLAGS --threads:on"
 
