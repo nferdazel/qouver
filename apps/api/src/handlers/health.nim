@@ -1,7 +1,7 @@
 ## Health check handler
 
 import std/[json, times]
-import mummy
+import qummy
 import ./common
 import ../db
 

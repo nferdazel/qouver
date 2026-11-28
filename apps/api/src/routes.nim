@@ -1,6 +1,6 @@
 ## Route definitions matching packages/contracts/openapi/qouver-api.yaml
 
-import mummy
+import qummy
 import ./db
 import ./handlers/[health, projects, journal, systems, contact]
 

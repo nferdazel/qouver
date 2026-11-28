@@ -35,7 +35,7 @@ flowchart LR
     end
 
     subgraph Services ["Application Runtime (Podman Quadlet)"]
-        NimAPI["qouver-api\n(Nim • Mummy • Port 8091)"]
+        NimAPI["qouver-api\n(Nim • Qummy • Port 8091)"]
     end
 
     subgraph Persistence ["Data Layer"]
@@ -59,14 +59,14 @@ flowchart LR
   contact form.
 - Contract-driven development: the OpenAPI 3.1 specification in `packages/contracts` is the single
   source of truth, and compiles into typed clients for the web app and for consumers.
-- Native efficiency: the backend runs on compiled Nim using the evented [Mummy](https://github.com/guzba/mummy)
-  server, with a low memory footprint and predictable latency.
+- Native efficiency: the backend runs on compiled Nim using the evented [Qummy](https://github.com/qouver/qummy)
+  server (our maintained fork of Mummy), with a low memory footprint and predictable latency.
 - WCAG 2.2 AA: continuous automated accessibility verification with Playwright and
   `@axe-core/playwright`.
 
 | Part | Language | Version |
 |---|---|---|
-| API | Nim + Mummy | `qouver.nimble` requires `nim >= 2.2.0 & < 2.5.0`; CI pins 2.4.2 |
+| API | Nim + Qummy | `qouver.nimble` requires `nim >= 2.2.0 & < 2.5.0`; CI pins 2.4.2 |
 | Web | SvelteKit, Svelte 5 runes, TypeScript | see `apps/web/package.json` |
 | Database | PostgreSQL | 18 |
 
@@ -94,7 +94,7 @@ ladder. Tokens are declared once, in `apps/web/static/styles.css`, and mirrored 
 ```text
 qouver/
 ├── apps/
-│   ├── api/                 # Nim HTTP backend (Mummy + db_postgres)
+│   ├── api/                 # Nim HTTP backend (Qummy + db_postgres)
 │   │   ├── src/             # Handlers, configuration, and data access
 │   │   └── tests/           # Contract parity and API unit test suites
 │   └── web/                 # SvelteKit presentation app (Svelte 5 runes)
@@ -157,15 +157,23 @@ the one command a laptop runs before a pull request.
 
 ## Deployment
 
-Deployments run alongside the other systems on Rocky Linux:
+Deployments run alongside the other systems on Rocky Linux.
+
+A new host needs one credential first: `ghcr.io/qouver/qouver-{api,web}` are private, so the
+deploy user needs a GHCR credential with `read:packages` in `~/.config/containers/auth.json`. The
+script pulls as that user, and a pull that fails on auth aborts at once instead of waiting for a
+missing tag.
 
 1. GitHub push webhook: pushes to `main` deliver an HMAC-SHA256 authenticated event to
    `https://api.qouver.com/hooks/qouver`.
-2. Atomic in-place build: web assets are compiled with `corepack pnpm` and swapped atomically into
-   `/srv/qouver/apps/qouver/web`; the API image `localhost/qouver-api:local` is built locally with
-   Podman.
-3. Health gate and rollback: the script polls `http://127.0.0.1:8091/healthz`. If unhealthy, the
-   previous API image and web assets (`.prev`) are restored automatically.
+2. Signed pulls: the API and web images are pulled from `ghcr.io/qouver/qouver-{api,web}:sha-<short>`,
+   their revision label and cosign signature verified, then retagged `:local` / `:prev`. Web assets
+   are extracted from the verified image and swapped atomically into `/srv/qouver/apps/qouver/web`;
+   by default the host builds nothing. `BUILD_MODE=host ./ops/scripts/deploy-vps.sh` is the manual
+   escape hatch that compiles the API image on the host, for the day GitHub or the registry is down.
+3. Health gate and rollback: the script polls `http://127.0.0.1:8091/healthz` and requires it to
+   report the revision being deployed. If unhealthy, the previous API image and web assets
+   (`.prev`) are restored automatically.
 4. Caddy host routing: static routes are served directly by Caddy's `file_server` (SELinux
    `httpd_sys_content_t`); `/api/*` and `/healthz` are reverse-proxied to internal port `8091`.
 

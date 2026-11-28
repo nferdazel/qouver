@@ -1,8 +1,8 @@
-## Mummy HTTP Server Builder
+## Qummy HTTP Server Builder
 
 import std/[posix, strutils, atomics]
-import mummy
-import mummy/routers
+import qummy
+import qummy/routers
 import ./config
 import ./db
 import ./routes
@@ -17,7 +17,7 @@ proc exitNow(code: cint) {.importc: "_exit", header: "<unistd.h>".}
 #
 # Signal context stays async-signal-safe: one atomic load, one atomic exchange
 # and a plain `_exit` syscall. bf4a4b1 crashed with SIGSEGV because it called
-# mummy's Server.close() here, and close() takes the selector lock.
+# Qummy's Server.close() here, and close() takes the selector lock.
 #
 # A request that is already being served is allowed to finish before the process
 # leaves. `alarm` arms a hard cap at signal time, so a stuck client cannot push
@@ -56,7 +56,7 @@ proc trackInFlight(handler: RequestHandler): RequestHandler =
         discard usleep(ResponseFlushGraceUs)
         exitNow(0)
 
-proc mummyPattern*(path: string): string =
+proc qummyPattern*(path: string): string =
   var segments: seq[string]
   for segment in path.split('/'):
     if segment.len > 2 and segment[0] == '{' and segment[^1] == '}':
@@ -83,7 +83,7 @@ proc buildRouter*(db: Database): Router =
 
   for spec in allRoutes():
     let handleRequest = bindHandler(spec.handler, db)
-    let pattern = mummyPattern(spec.path)
+    let pattern = qummyPattern(spec.path)
     result.options(pattern, proc(req: Request) {.gcsafe.} =
       handleOptions(req)
     )

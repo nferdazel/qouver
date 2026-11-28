@@ -1,7 +1,7 @@
 ## Contact form handler
 
 import std/[json, locks, strutils, tables, times]
-import mummy
+import qummy
 import ./common
 import ../db
 
