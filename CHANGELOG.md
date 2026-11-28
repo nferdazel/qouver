@@ -14,6 +14,8 @@ those commits.
 
 ### Changed
 
+- The Nim floor is `>= 2.2.6` instead of `>= 2.2.0`, matching Qummy 0.6.1's own requirement, so a
+  toolchain below 2.2.6 fails at the declared floor instead of inside Qummy.
 - The API builds on Qummy 0.6.1: `qouver.nimble` pins `#0.6.1` instead of `#0.5.1`, and the Docker
   builder moves from `nimlang/nim:2.2.4-alpine` to `2.2.6-alpine-regular` behind the image digest
   Qummy CI builds with, because 0.6.1 requires Nim 2.2.6 or newer. No runtime behaviour change.

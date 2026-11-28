@@ -14,7 +14,7 @@ release publishes it. There is no admin surface and no runtime editing.
 ## Status
 
 Version and dependency requirements live in `qouver.nimble` (`version = "0.1.0"`, and
-`requires "nim >= 2.2.0 & < 2.5.0"`). The site at qouver.com runs from `main`: a push deploys it, and the
+`requires "nim >= 2.2.6 & < 2.5.0"`). The site at qouver.com runs from `main`: a push deploys it, and the
 repository carries no tags.
 
 ## Architecture
@@ -66,7 +66,7 @@ flowchart LR
 
 | Part | Language | Version |
 |---|---|---|
-| API | Nim + Qummy | `qouver.nimble` requires `nim >= 2.2.0 & < 2.5.0`; CI pins 2.4.2 |
+| API | Nim + Qummy | `qouver.nimble` requires `nim >= 2.2.6 & < 2.5.0`; CI pins 2.4.2 |
 | Web | SvelteKit, Svelte 5 runes, TypeScript | see `apps/web/package.json` |
 | Database | PostgreSQL | 18 |
 
