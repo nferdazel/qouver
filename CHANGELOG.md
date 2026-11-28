@@ -14,6 +14,9 @@ those commits.
 
 ### Changed
 
+- The API builds on Qummy 0.6.1: `qouver.nimble` pins `#0.6.1` instead of `#0.5.1`, and the Docker
+  builder moves from `nimlang/nim:2.2.4-alpine` to `2.2.6-alpine-regular` behind the image digest
+  Qummy CI builds with, because 0.6.1 requires Nim 2.2.6 or newer. No runtime behaviour change.
 - The API runs on Qummy 0.5.1, our fork of Mummy, installed from its published git tag. The vendored
   copy and `config.nims` are gone, so `qouver.nimble` is the only place a dependency is declared, and
   the loopback regression test now fails unless the imported module resolves to the installed package.

@@ -6,5 +6,5 @@ license     = "MIT"
 
 requires "nim >= 2.2.0 & < 2.5.0"
 requires "db_connector == 0.1.0"
-requires "https://github.com/qouver/qummy#0.5.1"
+requires "https://github.com/qouver/qummy#0.6.1"
 requires "yaml == 2.2.1"
