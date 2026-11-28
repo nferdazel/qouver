@@ -151,7 +151,7 @@ verify_signature() {
   while :; do
     # stderr only: that is where cosign puts the reason it rejected the digest.
     if err="$(cosign verify "$digest" \
-      --certificate-identity-regexp "^https://github.com/nferdazel/qouver/" \
+      --certificate-identity-regexp "^https://github.com/qouver/qouver/" \
       --certificate-oidc-issuer https://token.actions.githubusercontent.com 2>&1 >/dev/null)"; then
       if [ "$attempt" -gt 1 ]; then
         log "==> cosign verify passed on attempt $attempt for ${digest##*@} ($(( $(date +%s) - start ))s into the window)"
@@ -200,7 +200,7 @@ fi
 # 4. Fetch latest commit
 if [ ! -d "$MONO_DIR/.git" ]; then
   log "==> Cloning repository into $MONO_DIR"
-  git clone github-qouver:nferdazel/qouver.git "$MONO_DIR"
+  git clone github-qouver:qouver/qouver.git "$MONO_DIR"
 fi
 
 cd "$MONO_DIR"
@@ -371,7 +371,7 @@ fi
 #    The host never runs `pnpm build` any more — every build happens on GitHub.
 log "==> Web: pulling the signed web image..."
 SHORT_WEB="$(printf '%s' "$REV" | cut -c1-7)"
-WEB_IMAGE="ghcr.io/nferdazel/qouver-web:sha-${SHORT_WEB}"
+WEB_IMAGE="ghcr.io/qouver/qouver-web:sha-${SHORT_WEB}"
 WEB_PULLED=0
 PULL_OUT="$(mktemp)"
 RC=0
@@ -451,7 +451,7 @@ fi
 #    BUILD_MODE=host keeps the old compile path as the manual escape hatch for
 #    the day GitHub or the registry is down (DEPLOY-FLOW.md §1); never default.
 SHORT="$(printf '%s' "$REV" | cut -c1-7)"
-IMAGE_REF="ghcr.io/nferdazel/qouver-api:sha-${SHORT}"
+IMAGE_REF="ghcr.io/qouver/qouver-api:sha-${SHORT}"
 IMAGE_PULLED=0
 
 if [ "${BUILD_MODE:-registry}" = "host" ]; then

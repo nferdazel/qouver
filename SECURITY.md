@@ -10,7 +10,7 @@ receive no fixes, and there is no long-term-support branch.
 Do not open a public issue, pull request or discussion for a security problem. Use GitHub private
 vulnerability reporting:
 
-<https://github.com/nferdazel/qouver/security/advisories/new> (the repository's **Security** tab,
+<https://github.com/qouver/qouver/security/advisories/new> (the repository's **Security** tab,
 then **Report a vulnerability**). Advisory drafts stay private until they are published. That channel
 is enabled on this repository.
 

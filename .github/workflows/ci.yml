@@ -3,7 +3,7 @@
 #
 # - no paths-ignore under `on:` (rule 10; the workflow must always run so gate always reports)
 # - `changes` job decides what to build; unknown paths fall through to "build"
-# - `image-api` builds every PR, pushes ghcr.io/nferdazel/qouver-api:sha-<7> + :main on main,
+# - `image-api` builds every PR, pushes ghcr.io/qouver/qouver-api:sha-<7> + :main on main,
 #   keyless-signs the digest, labels the revision the host compares against the payload
 # - `gate` is the single name a deploy script or branch protection ever reads
 # - deploy is not a job: the repository push webhook calls /hooks/qouver, the same
@@ -295,8 +295,8 @@ jobs:
           build-args: |
             GIT_REV=${{ github.sha }}
           tags: |
-            ghcr.io/nferdazel/qouver-api:sha-${{ steps.short.outputs.sha7 }}
-            ghcr.io/nferdazel/qouver-api:main
+            ghcr.io/qouver/qouver-api:sha-${{ steps.short.outputs.sha7 }}
+            ghcr.io/qouver/qouver-api:main
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha
@@ -310,7 +310,7 @@ jobs:
         if: github.event_name == 'push'
         env:
           DIGEST: ${{ steps.push.outputs.digest }}
-        run: cosign sign --yes "ghcr.io/nferdazel/qouver-api@${DIGEST}"
+        run: cosign sign --yes "ghcr.io/qouver/qouver-api@${DIGEST}"
 
   # Same shape as image-api: builds on every PR, pushes only on main. The image is
   # not consumed yet — the quadlet exists in ops/systemd, Caddy still serves the
@@ -364,8 +364,8 @@ jobs:
           build-args: |
             GIT_REV=${{ github.sha }}
           tags: |
-            ghcr.io/nferdazel/qouver-web:sha-${{ steps.short.outputs.sha7 }}
-            ghcr.io/nferdazel/qouver-web:main
+            ghcr.io/qouver/qouver-web:sha-${{ steps.short.outputs.sha7 }}
+            ghcr.io/qouver/qouver-web:main
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha
@@ -379,7 +379,7 @@ jobs:
         if: github.event_name == 'push'
         env:
           DIGEST: ${{ steps.push.outputs.digest }}
-        run: cosign sign --yes "ghcr.io/nferdazel/qouver-web@${DIGEST}"
+        run: cosign sign --yes "ghcr.io/qouver/qouver-web@${DIGEST}"
 
   # The only name a deploy script or a branch protection rule reads, so the jobs
   # above can be rewritten without touching deployment.
