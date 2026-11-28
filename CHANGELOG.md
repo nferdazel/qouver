@@ -14,9 +14,9 @@ those commits.
 
 ### Changed
 
-- The API runs on Qummy 0.5.1, our fork of Mummy, installed from its published git tag. `vendor/mummy`
-  and `config.nims` are gone, so `qouver.nimble` is the only place a dependency is declared, and the
-  loopback regression test now fails unless the imported module resolves to the installed package.
+- The API runs on Qummy 0.5.1, our fork of Mummy, installed from its published git tag. The vendored
+  copy and `config.nims` are gone, so `qouver.nimble` is the only place a dependency is declared, and
+  the loopback regression test now fails unless the imported module resolves to the installed package.
   No runtime behaviour change.
 - Site and API copy now match the repositories: Majadu is a Nim 2.4 API on Mummy, not Go;
   its rating model is rolling points, not Glicko; SDS edits in place with an activity log;
