@@ -3,7 +3,7 @@
 #
 # - no paths-ignore under `on:` (rule 10; the workflow must always run so gate always reports)
 # - `changes` job decides what to build; unknown paths fall through to "build"
-# - `image-api` builds every PR, pushes ghcr.io/nferdazel/qouver-api:sha-<7> + :main on main,
+# - `image-api` builds every PR, pushes ghcr.io/qouver/qouver-api:sha-<7> + :main on main,
 #   keyless-signs the digest, labels the revision the host compares against the payload
 # - `gate` is the single name a deploy script or branch protection ever reads
 # - deploy is not a job: the repository push webhook calls /hooks/qouver, the same
@@ -145,16 +145,30 @@ jobs:
     needs: [preflight]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      GITLEAKS_VERSION: 8.30.1
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
-      - name: gitleaks
-        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # The wrapper action refuses to run for an organization without a paid
+      # GITLEAKS_LICENSE (v3.0.0: "[qouver] is an organization. License key is
+      # required."), and the bot-only repo does not need another secret for a
+      # check the binary performs on its own. Same binary, same .gitleaks.toml,
+      # no licence: install the release and scan the whole history. A leaked
+      # token is public the moment it is pushed, so the scan is not limited to
+      # the diff.
+      - name: Install gitleaks
+        run: |
+          set -eu
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Scan the full history
+        run: gitleaks git --redact --no-banner --verbose --exit-code 1 .
 
       # The audit reads pnpm-lock.yaml, so it needs the same toolchain the verify
       # job uses and nothing else. High and above only: a transitive low-severity
@@ -295,8 +309,8 @@ jobs:
           build-args: |
             GIT_REV=${{ github.sha }}
           tags: |
-            ghcr.io/nferdazel/qouver-api:sha-${{ steps.short.outputs.sha7 }}
-            ghcr.io/nferdazel/qouver-api:main
+            ghcr.io/qouver/qouver-api:sha-${{ steps.short.outputs.sha7 }}
+            ghcr.io/qouver/qouver-api:main
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha
@@ -310,7 +324,7 @@ jobs:
         if: github.event_name == 'push'
         env:
           DIGEST: ${{ steps.push.outputs.digest }}
-        run: cosign sign --yes "ghcr.io/nferdazel/qouver-api@${DIGEST}"
+        run: cosign sign --yes "ghcr.io/qouver/qouver-api@${DIGEST}"
 
   # Same shape as image-api: builds on every PR, pushes only on main. The image is
   # not consumed yet — the quadlet exists in ops/systemd, Caddy still serves the
@@ -364,8 +378,8 @@ jobs:
           build-args: |
             GIT_REV=${{ github.sha }}
           tags: |
-            ghcr.io/nferdazel/qouver-web:sha-${{ steps.short.outputs.sha7 }}
-            ghcr.io/nferdazel/qouver-web:main
+            ghcr.io/qouver/qouver-web:sha-${{ steps.short.outputs.sha7 }}
+            ghcr.io/qouver/qouver-web:main
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha
@@ -379,7 +393,7 @@ jobs:
         if: github.event_name == 'push'
         env:
           DIGEST: ${{ steps.push.outputs.digest }}
-        run: cosign sign --yes "ghcr.io/nferdazel/qouver-web@${DIGEST}"
+        run: cosign sign --yes "ghcr.io/qouver/qouver-web@${DIGEST}"
 
   # The only name a deploy script or a branch protection rule reads, so the jobs
   # above can be rewritten without touching deployment.

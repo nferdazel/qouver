@@ -54,10 +54,19 @@ jobs:
           set -eu
           for pkg in $PACKAGES; do
             echo "== $pkg"
+            # The repo moved from a personal account to the org on 2026-11-28 and
+            # GHCR keeps container packages scoped to the account that owns them,
+            # so the org has no package until the first push after the move. That
+            # is a normal state, not a failed prune: skip instead of failing the
+            # job on a 404 the day before any image exists here.
+            if ! gh api "orgs/$OWNER/packages/container/$pkg" >/dev/null 2>&1; then
+              echo "   skip: no $pkg package under $OWNER yet"
+              continue
+            fi
             # Newest first, with the tags of every version. Release-tagged versions
             # are removed from the candidate list before the cap is applied, so a
             # `main` or `vX.Y.Z` manifest is never deleted however old it is.
-            gh api --paginate "user/packages/container/$pkg/versions?per_page=100" \
+            gh api --paginate "orgs/$OWNER/packages/container/$pkg/versions?per_page=100" \
               --jq '[.[] | {id: .id, created: .created_at, tags: (.metadata.container.tags // [])}] | .[]' |
               jq -s -r --argjson keep "$KEEP" '
                 sort_by(.created) | reverse
@@ -72,7 +81,7 @@ jobs:
                 elif [ -n "${DRY_RUN:-}" ]; then
                   echo "   would delete $id ($tags)"
                 else
-                  gh api -X DELETE "user/packages/container/$pkg/versions/$id" >/dev/null
+                  gh api -X DELETE "orgs/$OWNER/packages/container/$pkg/versions/$id" >/dev/null
                   echo "   deleted $id ($tags)"
                 fi
               done
