@@ -1,5 +1,5 @@
 # Stage 1: Build Nim binary
-FROM docker.io/nimlang/nim:2.2.4-alpine AS builder
+FROM docker.io/nimlang/nim:2.2.6-alpine-regular@sha256:a08886c1076a40085c83fd682dcf8384facb73bd7fcba30c156272634e315806 AS builder
 
 WORKDIR /app
 RUN apk add --no-cache postgresql-dev gcc musl-dev git
