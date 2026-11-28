@@ -6,32 +6,36 @@
 ## arrives with its headers and a body longer than the header block in the same
 ## TCP read.
 ##
-## This test runs the real mummy server on a loopback port in a thread and
+## This test runs the real qummy server on a loopback port in a thread and
 ## writes headers + body in one send(), so it exercises the receive path that
 ## trapped production. It must fail on the unpatched source and pass on the
-## vendored copy with the four copyMem -> moveMem fixes.
+## published qummy package, which carries the four copyMem -> moveMem fixes.
 
 import std/[macros, net, os, strutils, unittest]
-import mummy
-import mummy/routers
+import qummy
+import qummy/routers
 
 const BodySizes = [1, 63, 200, 400, 5000, 200000]
 
-# The compile-time checks below fail if the imported mummy is the nimble
-# package instead of vendor/mummy, or if the overlapping shifts still use
-# copyMem. Without them a build could silently link the unpatched module.
-macro vendoredMummySource(): untyped =
-  let path = getImpl(bindSym("serve", brClosed)).lineInfoObj.filename
-  doAssert "vendor/mummy" in path.replace('\\', '/'),
-    "mummy resolved to " & path & ", expected vendor/mummy/mummy.nim"
+# The compile-time checks below fail if `import qummy` resolves to anything but
+# the installed qummy package (a vendored copy or upstream mummy), or if the
+# receive shifts still use copyMem. Without them a build could silently link an
+# unpatched module.
+macro qummyPackageSource(): untyped =
+  let path = getImpl(bindSym("serve", brClosed)).lineInfoObj.filename.replace('\\', '/')
+  doAssert path.endsWith("/qummy.nim"),
+    "import qummy resolved to " & path & ", expected qummy.nim"
+  doAssert "/pkgs2/qummy-" in path or "/pkgs/qummy-" in path or "/nimbledeps/qummy" in path,
+    "qummy resolved to " & path &
+      ", expected the installed qummy package (nimble pkgs2 or nimbledeps)"
   newLit(readFile(path))
 
-const MummySrc = vendoredMummySource()
+const QummySrc = qummyPackageSource()
 
 static:
-  doAssert MummySrc.count("moveMem(") == 4,
+  doAssert QummySrc.count("moveMem(") == 4,
     "expected the four overlapping buffer shifts to use moveMem"
-  doAssert MummySrc.count("copyMem(") == 6,
+  doAssert QummySrc.count("copyMem(") == 6,
     "the disjoint copies must stay copyMem; patch touches four sites only"
 
 proc newTestServer(port: Port) {.thread.} =
@@ -83,7 +87,7 @@ proc postInOneWrite(port: Port, bodyLen: int): string =
   sock.send(request)
   result = sock.recvLine()
 
-suite "Mummy receive buffer regression (SIGILL on POST body > header block)":
+suite "Qummy receive buffer regression (SIGILL on POST body > header block)":
   test "loopback server accepts bodies from 1 to 200000 bytes in one write":
     let port = freeLoopbackPort()
     var serverThread: Thread[Port]

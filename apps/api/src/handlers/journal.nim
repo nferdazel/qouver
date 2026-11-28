@@ -1,7 +1,7 @@
 ## Journal handlers
 
 import std/[json, options]
-import mummy
+import qummy
 import ./common
 import ../db
 

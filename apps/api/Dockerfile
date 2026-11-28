@@ -4,6 +4,8 @@ FROM docker.io/nimlang/nim:2.2.4-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache postgresql-dev gcc musl-dev git
 
+# qummy is installed from its published git tag by this step; it is not vendored
+# into the repository, so nothing here copies a package directory into the image.
 COPY qouver.nimble ./
 RUN nimble install -y -d
 
@@ -18,8 +20,6 @@ RUN nimble install -y -d
 # compares against after a restart it did not trust.
 ARG GIT_REV=dev
 
-COPY config.nims ./
-COPY vendor/ ./vendor/
 COPY shared/ ./shared/
 COPY apps/api/ ./apps/api/
 

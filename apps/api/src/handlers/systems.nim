@@ -1,7 +1,7 @@
 ## Systems health handler
 
 import std/json
-import mummy
+import qummy
 import ./common
 import ../db
 

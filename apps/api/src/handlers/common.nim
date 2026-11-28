@@ -1,7 +1,7 @@
 ## Common HTTP helpers for handlers
 
 import std/json
-import mummy
+import qummy
 
 proc respondJson*(req: Request, status: int, body: JsonNode) =
   var headers: HttpHeaders
